@@ -8,7 +8,49 @@
     "enabled": true,
     "head_sampling_rate": 1,
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "crow-core-interaction-service-db",
+      "database_id": "ba03bcb4-01e2-4880-ae94-01ef11ac3aa1"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "crow-core-interaction-service-store"
+    }
+  ],
   "env": {
-    "dev": {},
+    "dev": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "crow-core-interaction-service-db-dev",
+          "database_id": "fcf1a8ab-a16c-427c-9048-0a0d0f8465ef"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "R2_BUCKET",
+          "bucket_name": "crow-core-interaction-service-store-dev"
+        }
+      ]
+    },
+    "local": {
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "crow-core-interaction-service-db-local",
+          "database_id": "dba8eb40-30ee-4d71-982a-64ece6dca15b"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "R2_BUCKET",
+          "bucket_name": "crow-core-interaction-service-store-local"
+        }
+      ]
+    },
   },
 }
