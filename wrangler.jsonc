@@ -21,8 +21,14 @@
       "bucket_name": "crow-core-interaction-service-store"
     }
   ],
+  "routes": [
+    { "pattern": "interactions.crowai.dev", "custom_domain": true }
+  ],
   "env": {
     "dev": {
+      "routes": [
+        { "pattern": "dev.interactions.crowai.dev", "custom_domain": true }
+      ],
       "d1_databases": [
         {
           "binding": "DB",
