@@ -10,18 +10,40 @@
   },
   "vars": {
     "ENVIRONMENT": "prod",
+    "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
+  },
+  "dev": {
+    "port": 8008
+  },
+  "queues": {
+    "consumers": [
+      {
+        "queue": "crow-web-session-export",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+      },
+    ],
+    "producers": [
+      {
+        "binding": "PROCESSING_QUEUE",
+        "queue": "crow-web-session-export",
+      },
+    ],
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "crow-core-interaction-service-db",
-      "database_id": "ba03bcb4-01e2-4880-ae94-01ef11ac3aa1"
+      "database_id": "ba03bcb4-01e2-4880-ae94-01ef11ac3aa1",
+      "remote": true
     }
   ],
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
-      "bucket_name": "crow-core-interaction-service-store"
+      "bucket_name": "crow-core-interaction-service-store",
+      "remote": true
     }
   ],
   "routes": [
@@ -31,6 +53,7 @@
     "dev": {
       "vars": {
         "ENVIRONMENT": "dev",
+        "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
       },
       "routes": [
         { "pattern": "dev.interactions.crowai.dev", "custom_domain": true }
@@ -39,33 +62,70 @@
         {
           "binding": "DB",
           "database_name": "crow-core-interaction-service-db-dev",
-          "database_id": "fcf1a8ab-a16c-427c-9048-0a0d0f8465ef"
+          "database_id": "fcf1a8ab-a16c-427c-9048-0a0d0f8465ef",
+          "remote": true
         }
       ],
       "r2_buckets": [
         {
           "binding": "R2_BUCKET",
-          "bucket_name": "crow-core-interaction-service-store-dev"
+          "bucket_name": "crow-core-interaction-service-store-dev",
+          "remote": true
         }
-      ]
+      ],
+      "queues": {
+        "consumers": [
+          {
+            "queue": "crow-web-session-export-dev",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30,
+            "max_retries": 3,
+          },
+        ],
+        "producers": [
+          {
+            "binding": "PROCESSING_QUEUE",
+            "queue": "crow-web-session-export-dev",
+          },
+        ],
+      },
     },
     "local": {
       "vars": {
         "ENVIRONMENT": "local",
+        "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
       },
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "crow-core-interaction-service-db-local",
-          "database_id": "dba8eb40-30ee-4d71-982a-64ece6dca15b"
+          "database_id": "dba8eb40-30ee-4d71-982a-64ece6dca15b",
+          "remote": false
         }
       ],
       "r2_buckets": [
         {
           "binding": "R2_BUCKET",
-          "bucket_name": "crow-core-interaction-service-store-local"
+          "bucket_name": "crow-core-interaction-service-store-local",
+          "remote": false
         }
-      ]
+      ],
+      "queues": {
+        "consumers": [
+          {
+            "queue": "crow-web-session-export-dev",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30,
+            "max_retries": 3,
+          },
+        ],
+        "producers": [
+          {
+            "binding": "PROCESSING_QUEUE",
+            "queue": "crow-web-session-export-dev",
+          },
+        ],
+      },
     },
   },
 }
