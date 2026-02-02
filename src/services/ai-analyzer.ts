@@ -37,6 +37,7 @@ export async function analyzeSessionWithAI(
 
     // Try best models first, with fallbacks
     const modelIds = [
+      'workers-ai/@cf/meta/llama-3.3-70b-instruct-fp8-fast',
       '@cf/mistral/mistral-7b-instruct-v0.2',
       '@cf/meta/llama-2-7b-chat-int8',
     ];
