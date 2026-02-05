@@ -1,0 +1,7 @@
+services:
+  interaction-service:
+    build: .
+    ports:
+      - '8008:8080'
+    environment:
+      - ENVIRONMENT=local
