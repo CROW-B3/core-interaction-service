@@ -1,8 +1,13 @@
-import { z } from '@hono/zod-openapi';
-export interface Environment {}
+export interface Environment {
+  DB: D1Database;
+  ENVIRONMENT: 'local' | 'dev' | 'prod';
+}
 
-export const HelloWorldSchema = z
-  .object({
-    text: z.string(),
-  })
-  .openapi('User');
+export interface InteractionMessage {
+  organizationId: string;
+  sourceType: 'web' | 'cctv' | 'social';
+  sessionId?: string;
+  data: string;
+  summary?: string;
+  timestamp: number;
+}
