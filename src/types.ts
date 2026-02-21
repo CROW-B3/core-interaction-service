@@ -1,6 +1,7 @@
 export interface Environment {
   DB: D1Database;
   ENVIRONMENT: 'local' | 'dev' | 'prod';
+  INTERACTION_ANALYZER: DurableObjectNamespace;
 }
 
 export interface InteractionMessage {
