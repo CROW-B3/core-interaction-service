@@ -49,7 +49,7 @@
         {
           "binding": "DB",
           "database_name": "crow-core-interaction-service-db-dev",
-          "database_id": "fcf1a8ab-a16c-427c-9048-0a0d0f8465ef",
+          "database_id": "561e77da-d940-4091-a274-7ec5e6bf6755",
           "migrations_dir": "drizzle/migrations",
         },
       ],
@@ -72,6 +72,7 @@
       },
       "routes": [
         { "pattern": "dev.interactions.crowai.dev", "custom_domain": true },
+        { "pattern": "dev.internal.interactions.crowai.dev", "custom_domain": true },
       ],
     },
     "local": {
