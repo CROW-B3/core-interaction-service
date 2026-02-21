@@ -1,5 +1,41 @@
 import { createRoute, z } from '@hono/zod-openapi';
 
+export const AnalyzeInteractionsRoute = createRoute({
+  method: 'post',
+  path: '/api/v1/interactions/organization/:orgId/analyze',
+  request: {
+    params: z.object({ orgId: z.string() }),
+    query: z.object({
+      period: z.string().optional(),
+      limit: z.string().optional(),
+    }),
+    headers: z.object({
+      'x-organization-id': z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            summary: z.string(),
+            insights: z.array(z.string()),
+            anomalies: z.array(z.string()),
+            recommendations: z.array(z.string()),
+          }),
+        },
+      },
+      description: 'AI-generated interaction analysis',
+    },
+    403: {
+      content: {
+        'application/json': { schema: z.object({ error: z.string() }) },
+      },
+      description: 'Forbidden',
+    },
+  },
+});
+
 export const HelloWorldRoute = createRoute({
   method: 'get',
   path: '/',

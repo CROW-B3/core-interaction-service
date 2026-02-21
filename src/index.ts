@@ -1,15 +1,42 @@
 import type { Environment, InteractionMessage } from './types';
 import { OpenAPIHono } from '@hono/zod-openapi';
+import { DurableObject } from 'cloudflare:workers';
 import { and, eq, like, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { logger } from 'hono/logger';
 import { poweredBy } from 'hono/powered-by';
 import * as schema from './db/schema';
 import {
+  AnalyzeInteractionsRoute,
   GetInteractionsByOrgRoute,
   GetInteractionsSummaryRoute,
   HelloWorldRoute,
 } from './routes';
+
+export class InteractionAnalyzerContainer extends DurableObject<Environment> {
+  async fetch(request: Request): Promise<Response> {
+    return (this as any).ctx.container.fetch(request);
+  }
+}
+
+function buildBaseConditions(
+  orgId: string,
+  sourceType: string | undefined,
+  q: string | undefined
+) {
+  const orgCondition = eq(schema.interaction.organizationId, orgId);
+  const sourceCondition = sourceType
+    ? eq(schema.interaction.sourceType, sourceType)
+    : undefined;
+  const textCondition = q
+    ? or(
+        like(schema.interaction.data, `%${q}%`),
+        like(schema.interaction.summary, `%${q}%`)
+      )
+    : undefined;
+
+  return and(orgCondition, sourceCondition, textCondition);
+}
 
 const app = new OpenAPIHono<{ Bindings: Environment }>();
 app.use(poweredBy());
@@ -33,20 +60,12 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
   const limit = Number.parseInt(limitStr || '20', 10);
   const offset = (page - 1) * limit;
 
-  const whereClause = q
-    ? and(
-        eq(schema.interaction.organizationId, orgId),
-        or(
-          like(schema.interaction.data, `%${q}%`),
-          like(schema.interaction.summary, `%${q}%`)
-        )
-      )
-    : eq(schema.interaction.organizationId, orgId);
+  const baseConditions = buildBaseConditions(orgId, sourceType, q);
 
   const interactions = await db
     .select()
     .from(schema.interaction)
-    .where(whereClause)
+    .where(baseConditions)
     .limit(limit)
     .offset(offset)
     .orderBy(schema.interaction.timestamp);
@@ -54,14 +73,10 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
   const allForCount = await db
     .select()
     .from(schema.interaction)
-    .where(whereClause);
-
-  const filtered = sourceType
-    ? interactions.filter(i => i.sourceType === sourceType)
-    : interactions;
+    .where(baseConditions);
 
   return c.json({
-    interactions: filtered.map(i => ({
+    interactions: interactions.map(i => ({
       ...i,
       timestamp:
         i.timestamp instanceof Date
@@ -92,6 +107,60 @@ app.openapi(GetInteractionsSummaryRoute, async c => {
   const social = all.filter(i => i.sourceType === 'social').length;
 
   return c.json({ web, cctv, social, total: all.length });
+});
+
+app.openapi(AnalyzeInteractionsRoute, async c => {
+  const { orgId } = c.req.valid('param');
+  const { period: periodParam, limit: limitParam } = c.req.valid('query');
+  const headerOrgId = c.req.valid('header')['x-organization-id'];
+
+  if (headerOrgId && headerOrgId !== orgId) {
+    return c.json({ error: 'Forbidden' }, 403);
+  }
+
+  const db = drizzle(c.env.DB, { schema });
+  const fetchLimit = Number.parseInt(limitParam || '50', 10);
+  const period = periodParam || 'weekly';
+
+  const interactions = await db
+    .select()
+    .from(schema.interaction)
+    .where(eq(schema.interaction.organizationId, orgId))
+    .limit(fetchLimit)
+    .orderBy(schema.interaction.timestamp);
+
+  const interactionPayload = interactions.map(i => ({
+    id: i.id,
+    sourceType: i.sourceType,
+    sessionId: i.sessionId,
+    data: i.data,
+    summary: i.summary,
+    timestamp:
+      i.timestamp instanceof Date ? i.timestamp.getTime() : Number(i.timestamp),
+  }));
+
+  const stub = c.env.INTERACTION_ANALYZER.get(
+    c.env.INTERACTION_ANALYZER.idFromName(orgId)
+  );
+
+  const containerResponse = await stub.fetch('http://internal/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      organization_id: orgId,
+      interactions: interactionPayload,
+      period,
+    }),
+  });
+
+  const result = await containerResponse.json<{
+    summary: string;
+    insights: string[];
+    anomalies: string[];
+    recommendations: string[];
+  }>();
+
+  return c.json(result);
 });
 
 app.doc('/docs', {
