@@ -12,6 +12,22 @@
   "vars": {
     "ENVIRONMENT": "local",
   },
+  "durable_objects": {
+    "bindings": [
+      { "name": "INTERACTION_ANALYZER", "class_name": "InteractionAnalyzerContainer" }
+    ]
+  },
+  "containers": [
+    {
+      "class_name": "InteractionAnalyzerContainer",
+      "name": "interaction-analyzer",
+      "image": "./Dockerfile",
+      "max_instances": 2
+    }
+  ],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["InteractionAnalyzerContainer"] }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
@@ -45,6 +61,19 @@
       "vars": {
         "ENVIRONMENT": "dev",
       },
+      "durable_objects": {
+        "bindings": [
+          { "name": "INTERACTION_ANALYZER", "class_name": "InteractionAnalyzerContainer" }
+        ]
+      },
+      "containers": [
+        {
+          "class_name": "InteractionAnalyzerContainer",
+          "name": "interaction-analyzer",
+          "image": "./Dockerfile",
+          "max_instances": 2
+        }
+      ],
       "d1_databases": [
         {
           "binding": "DB",
