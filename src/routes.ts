@@ -61,6 +61,9 @@ export const GetInteractionsByOrgRoute = createRoute({
       sourceType: z.string().optional(),
       q: z.string().optional(),
     }),
+    headers: z.object({
+      'x-organization-id': z.string().optional(),
+    }),
   },
   responses: {
     200: {
@@ -95,6 +98,9 @@ export const GetInteractionsSummaryRoute = createRoute({
   path: '/api/v1/interactions/organization/:orgId/summary',
   request: {
     params: z.object({ orgId: z.string() }),
+    headers: z.object({
+      'x-organization-id': z.string().optional(),
+    }),
   },
   responses: {
     200: {
