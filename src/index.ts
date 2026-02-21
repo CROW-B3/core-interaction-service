@@ -48,7 +48,8 @@ app.openapi(HelloWorldRoute, c =>
 
 app.openapi(GetInteractionsByOrgRoute, async c => {
   const db = drizzle(c.env.DB, { schema });
-  const { orgId } = c.req.valid('param');
+  const { orgId: orgIdParam } = c.req.valid('param');
+  const orgId = c.req.header('X-Organization-Id') ?? orgIdParam;
   const {
     page: pageStr,
     limit: limitStr,
@@ -95,7 +96,8 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
 
 app.openapi(GetInteractionsSummaryRoute, async c => {
   const db = drizzle(c.env.DB, { schema });
-  const { orgId } = c.req.valid('param');
+  const { orgId: orgIdParam } = c.req.valid('param');
+  const orgId = c.req.header('X-Organization-Id') ?? orgIdParam;
 
   const all = await db
     .select()
@@ -160,7 +162,7 @@ app.openapi(AnalyzeInteractionsRoute, async c => {
     recommendations: string[];
   }>();
 
-  return c.json(result);
+  return c.json(result, 200);
 });
 
 app.doc('/docs', {
