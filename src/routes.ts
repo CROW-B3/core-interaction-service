@@ -23,6 +23,7 @@ export const GetInteractionsByOrgRoute = createRoute({
       page: z.string().optional(),
       limit: z.string().optional(),
       sourceType: z.string().optional(),
+      q: z.string().optional(),
     }),
   },
   responses: {

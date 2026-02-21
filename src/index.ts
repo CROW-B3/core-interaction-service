@@ -1,6 +1,6 @@
 import type { Environment, InteractionMessage } from './types';
 import { OpenAPIHono } from '@hono/zod-openapi';
-import { eq } from 'drizzle-orm';
+import { and, eq, like, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { logger } from 'hono/logger';
 import { poweredBy } from 'hono/powered-by';
@@ -22,16 +22,31 @@ app.openapi(HelloWorldRoute, c =>
 app.openapi(GetInteractionsByOrgRoute, async c => {
   const db = drizzle(c.env.DB, { schema });
   const { orgId } = c.req.valid('param');
-  const { page: pageStr, limit: limitStr, sourceType } = c.req.valid('query');
+  const {
+    page: pageStr,
+    limit: limitStr,
+    sourceType,
+    q,
+  } = c.req.valid('query');
 
   const page = Number.parseInt(pageStr || '1', 10);
   const limit = Number.parseInt(limitStr || '20', 10);
   const offset = (page - 1) * limit;
 
+  const whereClause = q
+    ? and(
+        eq(schema.interaction.organizationId, orgId),
+        or(
+          like(schema.interaction.data, `%${q}%`),
+          like(schema.interaction.summary, `%${q}%`)
+        )
+      )
+    : eq(schema.interaction.organizationId, orgId);
+
   const interactions = await db
     .select()
     .from(schema.interaction)
-    .where(eq(schema.interaction.organizationId, orgId))
+    .where(whereClause)
     .limit(limit)
     .offset(offset)
     .orderBy(schema.interaction.timestamp);
@@ -39,7 +54,7 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
   const allForCount = await db
     .select()
     .from(schema.interaction)
-    .where(eq(schema.interaction.organizationId, orgId));
+    .where(whereClause);
 
   const filtered = sourceType
     ? interactions.filter(i => i.sourceType === sourceType)
