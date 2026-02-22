@@ -52,10 +52,11 @@ app.get('/health', c =>
   c.json({ status: 'ok', service: 'core-interaction-service' })
 );
 
-// POST /create-interaction — enqueue an interaction for async processing
 app.openapi(CreateInteractionRoute, async c => {
   const body = c.req.valid('json');
-  await c.env.INTERACTION_QUEUE.send(body);
+  const dataAsString =
+    typeof body.data === 'string' ? body.data : JSON.stringify(body.data);
+  await c.env.INTERACTION_QUEUE.send({ ...body, data: dataAsString });
   return c.json({ queued: true }, 202);
 });
 
