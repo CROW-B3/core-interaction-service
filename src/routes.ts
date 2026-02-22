@@ -118,3 +118,41 @@ export const GetInteractionsSummaryRoute = createRoute({
     },
   },
 });
+
+export const CreateInteractionRoute = createRoute({
+  method: 'post',
+  path: '/create-interaction',
+  request: {
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            organizationId: z.string(),
+            sourceType: z.enum(['web', 'cctv', 'social']),
+            sessionId: z.string().optional(),
+            data: z.string(),
+            summary: z.string().optional(),
+            timestamp: z.number(),
+          }),
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    202: {
+      content: {
+        'application/json': {
+          schema: z.object({ queued: z.boolean() }),
+        },
+      },
+      description: 'Interaction queued for processing',
+    },
+    400: {
+      content: {
+        'application/json': { schema: z.object({ error: z.string() }) },
+      },
+      description: 'Bad request',
+    },
+  },
+});
