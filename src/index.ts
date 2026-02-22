@@ -6,8 +6,10 @@ import { drizzle } from 'drizzle-orm/d1';
 import { logger } from 'hono/logger';
 import { poweredBy } from 'hono/powered-by';
 import * as schema from './db/schema';
+import { createJWTMiddleware } from './middleware/jwt';
 import {
   AnalyzeInteractionsRoute,
+  CreateInteractionRoute,
   GetInteractionsByOrgRoute,
   GetInteractionsSummaryRoute,
   HelloWorldRoute,
@@ -44,6 +46,21 @@ app.use(logger());
 
 app.openapi(HelloWorldRoute, c =>
   c.json({ text: 'Hello from Interaction Service!' })
+);
+
+app.get('/health', c =>
+  c.json({ status: 'ok', service: 'core-interaction-service' })
+);
+
+// POST /create-interaction — enqueue an interaction for async processing
+app.openapi(CreateInteractionRoute, async c => {
+  const body = c.req.valid('json');
+  await c.env.INTERACTION_QUEUE.send(body);
+  return c.json({ queued: true }, 202);
+});
+
+app.use('/api/v1/interactions/*', async (c, next) =>
+  createJWTMiddleware(c.env)(c, next)
 );
 
 app.openapi(GetInteractionsByOrgRoute, async c => {
@@ -145,15 +162,49 @@ app.openapi(AnalyzeInteractionsRoute, async c => {
     c.env.INTERACTION_ANALYZER.idFromName(orgId)
   );
 
-  const containerResponse = await stub.fetch('http://internal/analyze', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      organization_id: orgId,
-      interactions: interactionPayload,
-      period,
-    }),
-  });
+  let containerResponse: Response;
+  try {
+    containerResponse = await stub.fetch('http://internal/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        organization_id: orgId,
+        interactions: interactionPayload,
+        period,
+      }),
+    });
+  } catch (err) {
+    console.error('Container fetch failed:', err);
+    return c.json(
+      {
+        error: 'Analysis container unavailable',
+        summary: '',
+        insights: [],
+        anomalies: [],
+        recommendations: [],
+      } as any,
+      500
+    );
+  }
+
+  if (!containerResponse.ok) {
+    const errText = await containerResponse.text();
+    console.error(
+      'Container returned non-OK status:',
+      containerResponse.status,
+      errText
+    );
+    return c.json(
+      {
+        error: `Analysis container error: ${containerResponse.status}`,
+        summary: '',
+        insights: [],
+        anomalies: [],
+        recommendations: [],
+      } as any,
+      500
+    );
+  }
 
   const result = await containerResponse.json<{
     summary: string;

@@ -2,6 +2,9 @@ export interface Environment {
   DB: D1Database;
   ENVIRONMENT: 'local' | 'dev' | 'prod';
   INTERACTION_ANALYZER: DurableObjectNamespace;
+  INTERACTION_QUEUE: Queue<InteractionMessage>;
+  AUTH_SERVICE_URL: string;
+  SYSTEM_SECRET: string;
 }
 
 export interface InteractionMessage {
