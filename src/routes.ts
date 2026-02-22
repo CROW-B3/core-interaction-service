@@ -33,6 +33,12 @@ export const AnalyzeInteractionsRoute = createRoute({
       },
       description: 'Forbidden',
     },
+    500: {
+      content: {
+        'application/json': { schema: z.object({ error: z.string() }) },
+      },
+      description: 'Internal server error',
+    },
   },
 });
 
@@ -121,7 +127,7 @@ export const GetInteractionsSummaryRoute = createRoute({
 
 export const CreateInteractionRoute = createRoute({
   method: 'post',
-  path: '/create-interaction',
+  path: '/api/v1/interactions/create-interaction',
   request: {
     body: {
       content: {
@@ -130,7 +136,7 @@ export const CreateInteractionRoute = createRoute({
             organizationId: z.string(),
             sourceType: z.enum(['web', 'cctv', 'social']),
             sessionId: z.string().optional(),
-            data: z.string(),
+            data: z.union([z.string(), z.record(z.string(), z.unknown())]),
             summary: z.string().optional(),
             timestamp: z.number(),
           }),
