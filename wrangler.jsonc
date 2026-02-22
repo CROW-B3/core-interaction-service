@@ -43,6 +43,12 @@
     }
   ],
   "queues": {
+    "producers": [
+      {
+        "binding": "INTERACTION_QUEUE",
+        "queue": "crow-interaction-queue",
+      },
+    ],
     "consumers": [
       {
         "queue": "crow-interaction-queue",
@@ -60,6 +66,8 @@
     "dev": {
       "vars": {
         "ENVIRONMENT": "dev",
+        "AUTH_SERVICE_URL": "https://dev.internal.auth-api.crowai.dev",
+        "SYSTEM_SECRET": "DF1IKzRMqusC5A/56EjCFuCAKVgPNoW6pibNi5IEsFw=",
       },
       "durable_objects": {
         "bindings": [
@@ -89,6 +97,12 @@
         }
       ],
       "queues": {
+        "producers": [
+          {
+            "binding": "INTERACTION_QUEUE",
+            "queue": "crow-interaction-queue-dev",
+          },
+        ],
         "consumers": [
           {
             "queue": "crow-interaction-queue-dev",
