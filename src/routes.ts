@@ -12,3 +12,12 @@ export const HelloWorldRoute = createRoute({
     },
   },
 });
+
+export {
+  GetAnalysisStatsRoute,
+  GetExitAnalysisRoute,
+  GetJourneyAnalysisRoute,
+  GetPageAnalysesRoute,
+  GetSessionAnalysisRoute,
+  TriggerAnalysisRoute,
+} from './routes/analysis-routes';
