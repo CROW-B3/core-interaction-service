@@ -32,6 +32,11 @@ app.route('/health', health);
 const worker = {
   fetch: app.fetch,
 
+  // Stub queue handler — old deployment had a queue consumer, kept for backwards compat
+  async queue(_batch: MessageBatch, _env: Environment) {
+    // No-op: queue processing removed in v2
+  },
+
   async scheduled(
     _controller: ScheduledController,
     env: Environment,

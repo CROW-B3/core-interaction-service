@@ -39,6 +39,19 @@
   "ai": {
     "binding": "AI"
   },
+  "durable_objects": {
+    "bindings": []
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["InteractionAnalyzerContainer"]
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["InteractionAnalyzerContainer"]
+    }
+  ],
   "triggers": {
     "crons": ["0 3 * * *"]
   },
@@ -70,7 +83,16 @@
           "binding": "INGEST_FRAMES",
           "bucket_name": "crow-cctv-frames-dev"
         }
-      ]
+      ],
+      "vectorize": [
+        {
+          "binding": "VECTORIZE",
+          "index_name": "crow-interactions"
+        }
+      ],
+      "ai": {
+        "binding": "AI"
+      }
     },
     "local": {
       "vars": {
@@ -93,7 +115,16 @@
           "binding": "INGEST_FRAMES",
           "bucket_name": "crow-cctv-frames-local"
         }
-      ]
+      ],
+      "vectorize": [
+        {
+          "binding": "VECTORIZE",
+          "index_name": "crow-interactions"
+        }
+      ],
+      "ai": {
+        "binding": "AI"
+      }
     },
   },
 }
