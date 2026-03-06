@@ -13,6 +13,7 @@ import { createOtelConfig } from './lib/otel';
 import analyze from './routes/analyze';
 import calibrate from './routes/calibrate';
 import calibrations from './routes/calibrations';
+import dashboard from './routes/dashboard';
 import health from './routes/health';
 import interactions from './routes/interactions';
 import registry from './routes/registry';
@@ -28,6 +29,7 @@ app.route('/calibrate', calibrate);
 app.route('/calibrations', calibrations);
 app.route('/registry', registry);
 app.route('/health', health);
+app.route('/dashboard', dashboard);
 
 const worker = {
   fetch: app.fetch,
