@@ -24,8 +24,24 @@
     {
       "binding": "R2_BUCKET",
       "bucket_name": "crow-core-interaction-service-store"
+    },
+    {
+      "binding": "INGEST_FRAMES",
+      "bucket_name": "crow-cctv-frames"
     }
   ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "crow-interactions"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "triggers": {
+    "crons": ["0 3 * * *"]
+  },
   "routes": [
     { "pattern": "interactions.crowai.dev", "custom_domain": true }
   ],
@@ -49,6 +65,10 @@
         {
           "binding": "R2_BUCKET",
           "bucket_name": "crow-core-interaction-service-store-dev"
+        },
+        {
+          "binding": "INGEST_FRAMES",
+          "bucket_name": "crow-cctv-frames-dev"
         }
       ]
     },
@@ -68,6 +88,10 @@
         {
           "binding": "R2_BUCKET",
           "bucket_name": "crow-core-interaction-service-store-local"
+        },
+        {
+          "binding": "INGEST_FRAMES",
+          "bucket_name": "crow-cctv-frames-local"
         }
       ]
     },
