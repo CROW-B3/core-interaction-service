@@ -18,7 +18,8 @@
     "format": "bun run prettier src/ --write",
     "bun:dev": "bun run --watch src/index.ts",
     "bun:start": "bun run src/index.ts",
-    "bun:build": "bun build src/index.ts --compile --outfile server"
+    "bun:build": "bun build src/index.ts --compile --outfile server",
+    "test": "vitest run"
   },
   "dependencies": {
     "@antfu/eslint-config": "^6.7.3",
@@ -31,12 +32,15 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.12.20",
+    "@cloudflare/workers-types": "^4.20260305.1",
     "@commitlint/config-conventional": "^20.3.0",
     "@deox/drizzle-d1-utils": "^0.0.1",
     "drizzle-kit": "^0.31.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.7.4",
+    "vitest": "^4.0.18",
     "wrangler": "^4.57.0"
   },
   "lint-staged": {
