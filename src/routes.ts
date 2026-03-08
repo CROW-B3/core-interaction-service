@@ -4,13 +4,16 @@ export const AnalyzeInteractionsRoute = createRoute({
   method: 'post',
   path: '/api/v1/interactions/organization/:orgId/analyze',
   request: {
-    params: z.object({ orgId: z.string() }),
+    params: z.object({ orgId: z.string().uuid() }),
     query: z.object({
-      period: z.string().optional(),
-      limit: z.string().optional(),
+      period: z.enum(['daily', 'weekly', 'monthly']).optional(),
+      limit: z
+        .string()
+        .regex(/^[1-9]\d{0,2}$/)
+        .optional(),
     }),
     headers: z.object({
-      'x-organization-id': z.string().optional(),
+      'x-organization-id': z.string().uuid(),
     }),
   },
   responses: {
@@ -60,15 +63,21 @@ export const GetInteractionsByOrgRoute = createRoute({
   method: 'get',
   path: '/api/v1/interactions/organization/:orgId',
   request: {
-    params: z.object({ orgId: z.string() }),
+    params: z.object({ orgId: z.string().uuid() }),
     query: z.object({
-      page: z.string().optional(),
-      limit: z.string().optional(),
-      sourceType: z.string().optional(),
-      q: z.string().optional(),
+      page: z
+        .string()
+        .regex(/^[1-9]\d*$/, 'page must be a positive integer')
+        .optional(),
+      limit: z
+        .string()
+        .regex(/^[1-9]\d*$/, 'limit must be a positive integer')
+        .optional(),
+      sourceType: z.enum(['web', 'cctv', 'social']).optional(),
+      q: z.string().max(256).optional(),
     }),
     headers: z.object({
-      'x-organization-id': z.string().optional(),
+      'x-organization-id': z.string().uuid(),
     }),
   },
   responses: {
@@ -103,9 +112,9 @@ export const GetInteractionsSummaryRoute = createRoute({
   method: 'get',
   path: '/api/v1/interactions/organization/:orgId/summary',
   request: {
-    params: z.object({ orgId: z.string() }),
+    params: z.object({ orgId: z.string().uuid() }),
     headers: z.object({
-      'x-organization-id': z.string().optional(),
+      'x-organization-id': z.string().uuid(),
     }),
   },
   responses: {
@@ -133,12 +142,19 @@ export const CreateInteractionRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            organizationId: z.string(),
+            organizationId: z.string().uuid(),
             sourceType: z.enum(['web', 'cctv', 'social']),
-            sessionId: z.string().optional(),
-            data: z.union([z.string(), z.record(z.string(), z.unknown())]),
-            summary: z.string().optional(),
-            timestamp: z.number(),
+            sessionId: z.string().max(128).optional(),
+            data: z.union([
+              z.string().max(65536),
+              z.record(z.string(), z.unknown()),
+            ]),
+            summary: z.string().max(4096).optional(),
+            timestamp: z
+              .number()
+              .int()
+              .min(0)
+              .max(Date.now() + 86400000),
           }),
         },
       },

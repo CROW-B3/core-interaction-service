@@ -3,8 +3,12 @@ export interface Environment {
   ENVIRONMENT: 'local' | 'dev' | 'prod';
   INTERACTION_ANALYZER: DurableObjectNamespace;
   INTERACTION_QUEUE: Queue<InteractionMessage>;
+  CCTV_QUEUE: Queue<CctvBatchQueueMessage>;
   AUTH_SERVICE_URL: string;
+  PRODUCT_SERVICE_URL: string;
   SYSTEM_SECRET: string;
+  INTERNAL_GATEWAY_KEY?: string;
+  AI: Ai;
 }
 
 export interface InteractionMessage {
@@ -14,4 +18,41 @@ export interface InteractionMessage {
   data: string;
   summary?: string;
   timestamp: number;
+}
+
+export interface FrameAnalysisResult {
+  frameIndex: number;
+  timestamp: number;
+  description: string;
+}
+
+export interface CctvBatchQueueMessage {
+  organizationId: string;
+  sourceType: 'cctv';
+  sessionId: string;
+  cameraId: string;
+  batchIndex: number;
+  frameAnalyses: FrameAnalysisResult[];
+  batchStartTimestamp: number;
+  batchEndTimestamp: number;
+}
+
+export interface ProductCatalogItem {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
+export interface ProductInteraction {
+  productId: string;
+  type: string;
+}
+
+export interface StructuredCctvInteraction {
+  behavior: string;
+  peopleCount: number;
+  productInteractions: ProductInteraction[];
+  confidence: number;
+  tags: string[];
 }

@@ -22,7 +22,7 @@ const fetchJWKS = async (authServiceUrl: string) => {
     throw new Error('Failed to fetch JWKS');
   }
   cachedJWKS = (await response.json()) as Record<string, unknown>;
-  cacheExpiry = now + 86400;
+  cacheExpiry = now + 300; // 5-minute TTL — short enough to honour key rotations
   return cachedJWKS;
 };
 
