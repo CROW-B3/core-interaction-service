@@ -9,16 +9,36 @@
     "enabled": true,
     "head_sampling_rate": 1,
   },
+  "ai": {
+    "binding": "AI",
+  },
   "vars": {
     "ENVIRONMENT": "prod",
     "AXIOM_DATASET": "crow-traces",
   },
+  "durable_objects": {
+    "bindings": [
+      { "name": "INTERACTION_ANALYZER", "class_name": "InteractionAnalyzerContainer" }
+    ]
+  },
+  "containers": [
+    {
+      "class_name": "InteractionAnalyzerContainer",
+      "name": "interaction-analyzer",
+      "image": "./Dockerfile",
+      "max_instances": 2
+    }
+  ],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["InteractionAnalyzerContainer"] }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "crow-core-interaction-service-db",
-      "database_id": "ba03bcb4-01e2-4880-ae94-01ef11ac3aa1"
-    }
+      "database_id": "ba03bcb4-01e2-4880-ae94-01ef11ac3aa1",
+      "migrations_dir": "drizzle/migrations",
+    },
   ],
   "r2_buckets": [
     {
@@ -26,50 +46,147 @@
       "bucket_name": "crow-core-interaction-service-store"
     }
   ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "INTERACTION_QUEUE",
+        "queue": "crow-interaction-queue",
+      },
+      {
+        "binding": "CCTV_QUEUE",
+        "queue": "crow-cctv-batch-queue",
+      },
+    ],
+    "consumers": [
+      {
+        "queue": "crow-interaction-queue",
+        "max_batch_size": 10,
+        "max_batch_timeout": 30,
+        "max_retries": 3,
+        "retry_delay": 60,
+      },
+      {
+        "queue": "crow-cctv-batch-queue",
+        "max_batch_size": 5,
+        "max_batch_timeout": 60,
+        "max_retries": 3,
+        "retry_delay": 120,
+      },
+    ],
+  },
   "routes": [
-    { "pattern": "interactions.crowai.dev", "custom_domain": true }
+    { "pattern": "interactions.crowai.dev", "custom_domain": true },
   ],
   "env": {
     "dev": {
+      "ai": {
+        "binding": "AI",
+      },
       "vars": {
         "ENVIRONMENT": "dev",
         "AXIOM_DATASET": "crow-traces",
+        "AUTH_SERVICE_URL": "https://dev.internal.auth-api.crowai.dev",
+        "PRODUCT_SERVICE_URL": "https://dev.internal.products.crowai.dev",
+        // SYSTEM_SECRET must be set as a secret: wrangler secret put SYSTEM_SECRET --env dev
       },
-      "routes": [
-        { "pattern": "dev.interactions.crowai.dev", "custom_domain": true }
+      "durable_objects": {
+        "bindings": [
+          { "name": "INTERACTION_ANALYZER", "class_name": "InteractionAnalyzerContainer" }
+        ]
+      },
+      "containers": [
+        {
+          "class_name": "InteractionAnalyzerContainer",
+          "name": "interaction-analyzer-dev",
+          "image": "./Dockerfile",
+          "max_instances": 2
+        }
       ],
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "crow-core-interaction-service-db-dev",
-          "database_id": "561e77da-d940-4091-a274-7ec5e6bf6755"
-        }
+          "database_id": "561e77da-d940-4091-a274-7ec5e6bf6755",
+          "migrations_dir": "drizzle/migrations",
+        },
       ],
       "r2_buckets": [
         {
           "binding": "R2_BUCKET",
           "bucket_name": "crow-core-interaction-service-store-dev"
         }
-      ]
+      ],
+      "queues": {
+        "producers": [
+          {
+            "binding": "INTERACTION_QUEUE",
+            "queue": "crow-interaction-queue-dev",
+          },
+          {
+            "binding": "CCTV_QUEUE",
+            "queue": "crow-cctv-batch-queue-dev",
+          },
+        ],
+        "consumers": [
+          {
+            "queue": "crow-interaction-queue-dev",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30,
+            "max_retries": 3,
+            "retry_delay": 60,
+          },
+          {
+            "queue": "crow-cctv-batch-queue-dev",
+            "max_batch_size": 5,
+            "max_batch_timeout": 60,
+            "max_retries": 3,
+            "retry_delay": 120,
+          },
+        ],
+      },
+      "routes": [
+        { "pattern": "dev.interactions.crowai.dev", "custom_domain": true },
+        { "pattern": "dev.internal.interactions.crowai.dev", "custom_domain": true },
+      ],
     },
     "local": {
       "vars": {
         "ENVIRONMENT": "local",
         "AXIOM_DATASET": "crow-traces",
+        "PRODUCT_SERVICE_URL": "http://localhost:8006",
       },
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "crow-core-interaction-service-db-local",
-          "database_id": "dba8eb40-30ee-4d71-982a-64ece6dca15b"
-        }
+          "database_id": "dba8eb40-30ee-4d71-982a-64ece6dca15b",
+          "migrations_dir": "drizzle/migrations",
+        },
       ],
       "r2_buckets": [
         {
           "binding": "R2_BUCKET",
           "bucket_name": "crow-core-interaction-service-store-local"
         }
-      ]
+      ],
+      "queues": {
+        "consumers": [
+          {
+            "queue": "crow-interaction-queue-local",
+            "max_batch_size": 10,
+            "max_batch_timeout": 30,
+            "max_retries": 3,
+            "retry_delay": 60,
+          },
+          {
+            "queue": "crow-cctv-batch-queue-local",
+            "max_batch_size": 5,
+            "max_batch_timeout": 60,
+            "max_retries": 3,
+            "retry_delay": 120,
+          },
+        ],
+      },
     },
   },
 }

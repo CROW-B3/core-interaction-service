@@ -1,11 +1,58 @@
-import { z } from '@hono/zod-openapi';
 export interface Environment {
-  AXIOM_API_TOKEN: string;
-  AXIOM_DATASET: string;
+  DB: D1Database;
+  ENVIRONMENT: 'local' | 'dev' | 'prod';
+  INTERACTION_ANALYZER: DurableObjectNamespace;
+  INTERACTION_QUEUE: Queue<InteractionMessage>;
+  CCTV_QUEUE: Queue<CctvBatchQueueMessage>;
+  AUTH_SERVICE_URL: string;
+  PRODUCT_SERVICE_URL: string;
+  SYSTEM_SECRET: string;
+  INTERNAL_GATEWAY_KEY?: string;
+  AI: Ai;
 }
 
-export const HelloWorldSchema = z
-  .object({
-    text: z.string(),
-  })
-  .openapi('User');
+export interface InteractionMessage {
+  organizationId: string;
+  sourceType: 'web' | 'cctv' | 'social';
+  sessionId?: string;
+  data: string;
+  summary?: string;
+  timestamp: number;
+}
+
+export interface FrameAnalysisResult {
+  frameIndex: number;
+  timestamp: number;
+  description: string;
+}
+
+export interface CctvBatchQueueMessage {
+  organizationId: string;
+  sourceType: 'cctv';
+  sessionId: string;
+  cameraId: string;
+  batchIndex: number;
+  frameAnalyses: FrameAnalysisResult[];
+  batchStartTimestamp: number;
+  batchEndTimestamp: number;
+}
+
+export interface ProductCatalogItem {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
+export interface ProductInteraction {
+  productId: string;
+  type: string;
+}
+
+export interface StructuredCctvInteraction {
+  behavior: string;
+  peopleCount: number;
+  productInteractions: ProductInteraction[];
+  confidence: number;
+  tags: string[];
+}

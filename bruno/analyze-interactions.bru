@@ -1,0 +1,29 @@
+meta {
+  name: Analyze Interactions
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/interactions/organization/{{orgId}}/analyze
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{apiKey}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "analysisType": "sentiment",
+    "dateRange": {
+      "start": "2026-01-01",
+      "end": "2026-02-21"
+    }
+  }
+}

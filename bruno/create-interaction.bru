@@ -1,0 +1,31 @@
+meta {
+  name: Create Interaction
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/interactions
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{apiKey}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "organizationId": "{{orgId}}",
+    "sourceType": "web",
+    "content": "Customer visited product page and added item to cart",
+    "metadata": {
+      "sessionId": "session-123",
+      "pageUrl": "/products/shirt-001"
+    }
+  }
+}
