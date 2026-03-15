@@ -1,12 +1,7 @@
-FROM oven/bun:1 AS builder
+FROM python:3.12-slim
 WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
-COPY . ./
-RUN bunx wrangler deploy --dry-run --outdir .wrangler/dist --env local
-
-FROM jacoblincool/workerd
-WORKDIR /worker
-COPY --from=builder /app/.wrangler/dist/index.js ./index.js
-COPY worker.capnp ./worker.capnp
+COPY pyproject.toml .
+RUN pip install uv && uv sync --no-editable
+COPY . .
 EXPOSE 8080
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
