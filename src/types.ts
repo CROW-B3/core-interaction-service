@@ -1,58 +1,20 @@
+import { z } from 'zod';
+
 export interface Environment {
   DB: D1Database;
-  ENVIRONMENT: 'local' | 'dev' | 'prod';
-  INTERACTION_ANALYZER: DurableObjectNamespace;
-  INTERACTION_QUEUE: Queue<InteractionMessage>;
-  CCTV_QUEUE: Queue<CctvBatchQueueMessage>;
-  AUTH_SERVICE_URL: string;
-  PRODUCT_SERVICE_URL: string;
-  SYSTEM_SECRET: string;
-  INTERNAL_GATEWAY_KEY?: string;
+  INGEST_FRAMES: R2Bucket;
+  VECTORIZE: VectorizeIndex;
   AI: Ai;
+  AUTH_TOKEN: string;
+  GEMINI_API_KEY: string;
+  AXIOM_API_TOKEN: string;
+  AXIOM_DATASET: string;
 }
 
-export interface InteractionMessage {
-  organizationId: string;
-  sourceType: 'web' | 'cctv' | 'social';
-  sessionId?: string;
-  data: string;
-  summary?: string;
-  timestamp: number;
-}
+export const SessionJobSchema = z.object({
+  store_id: z.string().min(1),
+  session_start: z.number().int().positive(),
+  session_end: z.number().int().positive(),
+});
 
-export interface FrameAnalysisResult {
-  frameIndex: number;
-  timestamp: number;
-  description: string;
-}
-
-export interface CctvBatchQueueMessage {
-  organizationId: string;
-  sourceType: 'cctv';
-  sessionId: string;
-  cameraId: string;
-  batchIndex: number;
-  frameAnalyses: FrameAnalysisResult[];
-  batchStartTimestamp: number;
-  batchEndTimestamp: number;
-}
-
-export interface ProductCatalogItem {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-}
-
-export interface ProductInteraction {
-  productId: string;
-  type: string;
-}
-
-export interface StructuredCctvInteraction {
-  behavior: string;
-  peopleCount: number;
-  productInteractions: ProductInteraction[];
-  confidence: number;
-  tags: string[];
-}
+export type SessionJob = z.infer<typeof SessionJobSchema>;
