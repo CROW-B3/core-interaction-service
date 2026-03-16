@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { analyzeSession, embedInteraction } from '../src/lib/analyzer';
 import { extractEmbeddingText } from '../src/lib/embeddings';
 import {
+  createFakeJpeg,
   createMockEmbeddings,
   createMockEnv,
   createMockGemini,
@@ -15,7 +16,7 @@ async function seedFrames(
   start: number,
   end: number
 ) {
-  const fakeJpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+  const fakeJpeg = createFakeJpeg();
   for (let sec = start; sec < end; sec += 60) {
     await r2.put(`composites/${storeId}/${sec}.jpg`, fakeJpeg);
   }

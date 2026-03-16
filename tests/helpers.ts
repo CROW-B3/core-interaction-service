@@ -74,6 +74,23 @@ export function createFailingGemini(
   return mock;
 }
 
+/**
+ * Generate a fake JPEG payload that passes the isDeadFrame check.
+ * 10KB of varied bytes with JPEG SOI/EOI markers and high entropy.
+ */
+export function createFakeJpeg(size = 10240): Uint8Array {
+  const buf = new Uint8Array(size);
+  buf[0] = 0xff;
+  buf[1] = 0xd8; // SOI
+  // Fill with high-entropy data — cycle all 256 values with xor mixing
+  for (let i = 2; i < size - 2; i++) {
+    buf[i] = (i * 137 + (i >> 3) * 59) & 0xff;
+  }
+  buf[size - 2] = 0xff;
+  buf[size - 1] = 0xd9; // EOI
+  return buf;
+}
+
 export function createMockR2(): R2Bucket {
   const store = new Map<string, Uint8Array>();
 

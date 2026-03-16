@@ -4,7 +4,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import analyze from '../src/routes/analyze';
 import health from '../src/routes/health';
 import interactions from '../src/routes/interactions';
-import { createMockD1, createMockEnv, createMockR2 } from './helpers';
+import {
+  createFakeJpeg,
+  createMockD1,
+  createMockEnv,
+  createMockR2,
+} from './helpers';
 
 function createApp() {
   const app = new Hono<{ Bindings: Environment }>();
@@ -24,10 +29,7 @@ async function seedSession(
   sessionStart: number,
   sessionEnd: number
 ) {
-  const fakeJpeg = new Uint8Array([
-    0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
-    0xff, 0xd9,
-  ]);
+  const fakeJpeg = createFakeJpeg();
   let count = 0;
   for (let sec = sessionStart; sec < sessionEnd; sec += 60) {
     await r2.put(`composites/${storeId}/${sec}.jpg`, fakeJpeg);

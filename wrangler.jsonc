@@ -4,7 +4,9 @@
   "account_id": "8f0203259905d8923687286c84921e6c",
   "main": "src/index.ts",
   "compatibility_date": "2025-12-17",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
@@ -45,18 +47,27 @@
   "migrations": [
     {
       "tag": "v1",
-      "new_classes": ["InteractionAnalyzerContainer"]
+      "new_classes": [
+        "InteractionAnalyzerContainer"
+      ]
     },
     {
       "tag": "v2",
-      "deleted_classes": ["InteractionAnalyzerContainer"]
+      "deleted_classes": [
+        "InteractionAnalyzerContainer"
+      ]
     }
   ],
   "triggers": {
-    "crons": ["0 3 * * *"]
+    "crons": [
+      "0 3 * * *"
+    ]
   },
   "routes": [
-    { "pattern": "interactions.crowai.dev", "custom_domain": true }
+    {
+      "pattern": "interactions.crowai.dev",
+      "custom_domain": true
+    }
   ],
   "env": {
     "dev": {
@@ -65,7 +76,10 @@
         "AXIOM_DATASET": "crow-traces",
       },
       "routes": [
-        { "pattern": "dev.interactions.crowai.dev", "custom_domain": true }
+        {
+          "pattern": "dev.interactions.crowai.dev",
+          "custom_domain": true
+        }
       ],
       "d1_databases": [
         {
@@ -122,9 +136,9 @@
           "index_name": "crow-interactions"
         }
       ],
-      "ai": {
-        "binding": "AI"
-      }
+      // "ai": {
+      //   "binding": "AI"
+      // }
     },
   },
 }

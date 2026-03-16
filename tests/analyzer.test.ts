@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { analyzeSession, persistAnalysis } from '../src/lib/analyzer';
 import {
   createFailingGemini,
+  createFakeJpeg,
   createMockD1,
   createMockEnv,
   createMockGemini,
@@ -15,10 +16,10 @@ async function seedFrames(
   end: number,
   intervalSec: number = 60
 ) {
+  const fakeJpeg = createFakeJpeg();
   for (let sec = start; sec < end; sec += intervalSec) {
     const key = `composites/${storeId}/${sec}.jpg`;
-    // 1x1 JPEG-like bytes (not real JPEG, just for testing)
-    await r2.put(key, new Uint8Array([0xff, 0xd8, 0xff, 0xe0]));
+    await r2.put(key, fakeJpeg);
   }
 }
 

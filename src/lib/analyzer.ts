@@ -5,6 +5,7 @@ import { extractEmbeddingText } from './embeddings';
 import {
   fetchCompositeFrame,
   groupIntoPeriods,
+  isDeadFrame,
   listCompositeKeys,
   pickRepresentativeFrame,
 } from './frames';
@@ -134,17 +135,36 @@ export async function analyzeSession(
     const representativeSec = pickRepresentativeFrame(periodBuckets);
 
     try {
-      const frameBytes = await fetchCompositeFrame(
+      // Try representative frame first, then fall back to others in the period
+      let frameBytes = await fetchCompositeFrame(
         env,
         job.store_id,
         representativeSec
       );
 
+      if (frameBytes && isDeadFrame(frameBytes)) {
+        // Representative is dead — try other frames in this period
+        const sorted = [...periodBuckets].sort((a, b) => a - b);
+        frameBytes = null;
+        for (const fallbackSec of sorted) {
+          if (fallbackSec === representativeSec) continue;
+          const fallback = await fetchCompositeFrame(
+            env,
+            job.store_id,
+            fallbackSec
+          );
+          if (fallback && !isDeadFrame(fallback)) {
+            frameBytes = fallback;
+            break;
+          }
+        }
+      }
+
       if (!frameBytes) {
         results.push({
           period_start: periodStart,
           analysis: null,
-          error: `No composite frame found for bucket_sec ${representativeSec}`,
+          error: `No usable frame for period ${periodStart} (${periodBuckets.length} frames checked, all dead or missing)`,
         });
         continue;
       }

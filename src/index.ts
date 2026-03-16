@@ -18,6 +18,7 @@ import health from './routes/health';
 import interactions from './routes/interactions';
 import registry from './routes/registry';
 import search from './routes/search';
+import seed from './routes/seed';
 
 const app = new Hono<{ Bindings: Environment }>();
 app.use(logger());
@@ -29,6 +30,7 @@ app.route('/calibrate', calibrate);
 app.route('/calibrations', calibrations);
 app.route('/registry', registry);
 app.route('/health', health);
+app.route('/seed', seed);
 app.route('/dashboard', dashboard);
 
 const worker = {
@@ -91,7 +93,31 @@ const worker = {
   },
 };
 
-export default instrument(
-  worker,
-  createOtelConfig('crow-core-interaction-service')
-);
+// Instrument with OTel only when Axiom credentials are available
+let instrumented: ReturnType<typeof instrument> | null = null;
+
+function getInstrumented() {
+  if (!instrumented) {
+    instrumented = instrument(
+      worker,
+      createOtelConfig('crow-core-interaction-service')
+    );
+  }
+  return instrumented;
+}
+
+export default {
+  fetch(request: Request, env: Environment, ctx: ExecutionContext) {
+    if (!env.AXIOM_API_TOKEN) return worker.fetch(request, env, ctx);
+    return getInstrumented().fetch(request, env, ctx);
+  },
+  queue: worker.queue,
+  scheduled(
+    controller: ScheduledController,
+    env: Environment,
+    ctx: ExecutionContext
+  ) {
+    if (!env.AXIOM_API_TOKEN) return worker.scheduled(controller, env, ctx);
+    return getInstrumented().scheduled!(controller, env, ctx);
+  },
+};

@@ -99,3 +99,42 @@ export function pickRepresentativeFrame(bucketSecs: number[]): number {
   const sorted = [...bucketSecs].sort((a, b) => a - b);
   return sorted[Math.floor(sorted.length / 2)];
 }
+
+/**
+ * Minimum byte size for a composite JPEG to be considered "real footage".
+ * Dead frames (all-black, all-white, uniform color) compress extremely well
+ * as JPEG and typically land under 5KB. Real multi-tile composites with
+ * actual footage are consistently 15KB+.
+ */
+const MIN_FRAME_BYTES = 8 * 1024; // 8KB
+
+/**
+ * Check if a frame is "dead" — all-black, all-white, or uniform with no
+ * actual footage. Uses two heuristics:
+ * 1. File size: dead frames compress to tiny JPEGs
+ * 2. Byte entropy: uniform images have very low entropy in the JPEG payload
+ */
+export function isDeadFrame(bytes: Uint8Array): boolean {
+  // Tiny JPEG = almost certainly a uniform/blank frame
+  if (bytes.length < MIN_FRAME_BYTES) return true;
+
+  // Sample entropy of the raw JPEG data (skip SOI header).
+  // Real footage has high byte variation; uniform images don't.
+  const sampleSize = Math.min(4096, bytes.length);
+  const offset = Math.min(2, bytes.length); // skip JPEG SOI marker
+  const freq = new Uint32Array(256);
+  for (let i = offset; i < offset + sampleSize && i < bytes.length; i++) {
+    freq[bytes[i]]++;
+  }
+  const n = Math.min(sampleSize, bytes.length - offset);
+  let entropy = 0;
+  for (let i = 0; i < 256; i++) {
+    if (freq[i] === 0) continue;
+    const p = freq[i] / n;
+    entropy -= p * Math.log2(p);
+  }
+
+  // Real JPEG footage typically has entropy > 5.0 bits/byte.
+  // Uniform/dead frames have very low entropy (< 3.0).
+  return entropy < 3.5;
+}
