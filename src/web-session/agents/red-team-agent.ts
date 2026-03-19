@@ -27,7 +27,7 @@ export async function runRedTeamAgent(
     .map(f => `- ${f.observation} [${f.significance}]`)
     .join('\n');
 
-  const prompt = `You are a red team analyst. Your job is to challenge the conclusions of a session analysis and identify biases or alternative explanations.
+  const prompt = `You are a red team analyst. Challenge the session analysis conclusions and identify biases or alternative explanations.
 
 Synthesis Conclusions:
 ${whySummary || 'No conclusions provided'}
@@ -35,13 +35,15 @@ ${whySummary || 'No conclusions provided'}
 Supporting Findings:
 ${findingsSummary || 'None'}
 
-For each "why" conclusion, you must:
-1. Challenge the conclusion - what evidence might contradict it?
-2. Provide an alternative explanation for the same behavior
-3. Identify any cognitive biases in the analysis (confirmation bias, recency bias, etc.)
-4. Adjust the confidence score up or down based on your review
+For each "why" conclusion:
+1. Challenge it - what evidence might contradict it?
+2. Provide an alternative explanation
+3. Identify cognitive biases (confirmation bias, recency bias, etc.)
+4. Adjust the confidence score based on your review
 
-Then produce a final set of "whys" with adjusted confidence scores.
+IMPORTANT: Keep the "why" statements SPECIFIC and narrative-based. Do NOT replace specific whys with generic category labels. Refine and improve the specificity of each why if possible.
+
+Produce a final set of refined "whys" with adjusted confidence scores.
 
 Respond ONLY with valid JSON:
 {
@@ -61,16 +63,17 @@ Respond ONLY with valid JSON:
   ],
   "finalWhys": [
     {
-      "why": "string",
+      "why": "string - refined specific narrative of why user left",
       "confidence": 0.0-1.0,
       "category": "string",
       "supportingEvidence": ["string"],
-      "recommendations": ["string"]
+      "recommendations": ["string"],
+      "journeyEvidence": "string - 1-2 sentence user journey summary"
     }
   ]
 }`;
 
-  const response = await runAiPrompt(ai, prompt, 512);
+  const response = await runAiPrompt(ai, prompt, 1024);
   if (!response) {
     return {
       ...buildFallbackAgentResult(AGENT_NAME),
@@ -130,6 +133,8 @@ Respond ONLY with valid JSON:
       recommendations: Array.isArray(w.recommendations)
         ? w.recommendations
         : [],
+      journeyEvidence: (w as unknown as Record<string, unknown>)
+        .journeyEvidence as string | undefined,
     })),
   };
 }
