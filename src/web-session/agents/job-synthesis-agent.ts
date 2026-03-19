@@ -7,6 +7,7 @@ import type {
 } from './types';
 import {
   buildFallbackAgentResult,
+  buildJourneyNarrativeText,
   parseJsonFromLlm,
   runAiPrompt,
 } from './types';
@@ -32,26 +33,41 @@ export async function runJobSynthesisAgent(
     .join('\n\n');
 
   const issuesSummary = issues
-    .map(i => `[${i.severity}] ${i.type}: ${i.description}`)
+    .map(
+      i =>
+        `[${i.severity}] ${i.type}: ${i.description}${i.url ? ` on ${i.url}` : ''}`
+    )
     .join('\n');
 
-  const prompt = `You are a synthesis analyst. Combine findings from multiple analysis agents to determine WHY the user left this web session.
+  const journeyText = buildJourneyNarrativeText(session);
 
-Session: ${session.metadata.deviceType} | Duration: ${Math.round(session.durationMs / 1000)}s | Exit: ${session.exitContext.lastPage}
+  const exitDetail = `Exit page: ${session.exitContext.lastPage}
+Last action: ${session.exitContext.lastAction}
+Exit page content: ${session.exitContext.lastDomSummary?.visibleContent?.slice(0, 200) ?? 'unknown'}
+Cart at exit: ${session.exitContext.cartState ? JSON.stringify(session.exitContext.cartState) : 'empty'}`;
+
+  const prompt = `You are a synthesis analyst. Your job is to produce SPECIFIC, EVIDENCE-BASED "why" conclusions explaining why this user left.
+
+Session: ${session.metadata.deviceType} | Duration: ${Math.round(session.durationMs / 1000)}s
+Referrer: ${session.metadata.referrer ?? 'direct'}
+
+${journeyText}
+
+${exitDetail}
 
 Deterministic Issues:
 ${issuesSummary || 'None detected'}
 
-Agent Findings:
+Agent Analysis Results:
 ${agentFindings}
 
-Synthesize all findings into multiple ranked "why" conclusions for why the user exited. Each "why" should be a distinct reason with its own evidence chain.
-
-Consider:
-- Which findings from different agents corroborate each other?
-- What is the most likely primary reason for exit?
-- Are there secondary contributing factors?
-- What specific, actionable recommendations address each "why"?
+CRITICAL INSTRUCTIONS:
+- Each "why" must be a SPECIFIC narrative statement about what happened, NOT a generic category label.
+- BAD example: "slow_performance caused user to leave"
+- GOOD example: "User viewed the $99/mo Pro plan pricing page for 45s, scrolled to compare features, but left without clicking 'Start Trial' - likely found the price too high for the features offered"
+- Reference ACTUAL pages visited, products viewed, prices seen, buttons clicked, and time spent.
+- The "journeyEvidence" field should be a 1-2 sentence description of the specific user actions that support this why.
+- Each "why" should tell a STORY about what happened during this session.
 
 Respond ONLY with valid JSON:
 {
@@ -62,16 +78,17 @@ Respond ONLY with valid JSON:
   "tags": ["string"],
   "whyConclusions": [
     {
-      "why": "string - clear statement of why user left",
+      "why": "string - specific narrative of why the user left, referencing actual actions and content",
       "confidence": 0.0-1.0,
-      "category": "string (e.g. price_sensitivity, slow_performance, missing_info, cart_abandonment, poor_ux)",
-      "supportingEvidence": ["string"],
-      "recommendations": ["string"]
+      "category": "string (price_sensitivity|slow_performance|missing_info|cart_abandonment|poor_ux|comparison_shopping|technical_error|content_mismatch|checkout_friction|out_of_stock|trust_concern|feature_gap)",
+      "supportingEvidence": ["string - specific evidence from user actions"],
+      "recommendations": ["string - actionable fix"],
+      "journeyEvidence": "string - 1-2 sentence summary of the user's journey that supports this conclusion"
     }
   ]
 }`;
 
-  const response = await runAiPrompt(ai, prompt, 1024);
+  const response = await runAiPrompt(ai, prompt, 1536);
   if (!response) {
     return {
       ...buildFallbackAgentResult(AGENT_NAME),
@@ -121,6 +138,8 @@ Respond ONLY with valid JSON:
       recommendations: Array.isArray(w.recommendations)
         ? w.recommendations
         : [],
+      journeyEvidence: (w as unknown as Record<string, unknown>)
+        .journeyEvidence as string | undefined,
     })),
   };
 }
