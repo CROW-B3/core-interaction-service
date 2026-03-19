@@ -168,6 +168,7 @@ export interface WhyConclusion {
   supportingEvidence: string[];
   recommendations: string[];
   journeyEvidence?: string;
+  domEvidence?: string;
 }
 
 export interface SynthesisResult extends AgentResult {
