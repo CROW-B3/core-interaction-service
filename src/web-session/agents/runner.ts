@@ -100,7 +100,7 @@ async function runFullPipeline(
     agentResults,
     issues
   );
-  const redTeam = await runRedTeamAgent(ai, synthesis);
+  const redTeam = await runRedTeamAgent(ai, synthesis, session);
 
   return buildResult(
     session,
