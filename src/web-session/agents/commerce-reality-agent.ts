@@ -5,6 +5,7 @@ import type {
 } from './types';
 import {
   buildFallbackAgentResult,
+  buildJourneyNarrativeText,
   parseJsonFromLlm,
   runAiPrompt,
 } from './types';
@@ -16,67 +17,74 @@ export async function runCommerceRealityAgent(
   session: PreprocessedSession,
   _issues: DeterministicIssue[]
 ): Promise<AgentResult> {
+  const journeyText = buildJourneyNarrativeText(session);
+
   const ecommerceTimeline = session.ecommerceEvents
     .map(e => {
       const data = e.data ?? {};
-      return `[${new Date(e.timestamp).toISOString()}] ${e.type}: ${data.productName ?? data.text ?? 'unknown'}${data.price ? ` ($${data.price})` : ''} at ${e.url}`;
+      const price = data.price ? ` ($${data.price})` : '';
+      const variant = data.variantName ? ` [${data.variantName}]` : '';
+      return `[${new Date(e.timestamp).toISOString()}] ${e.type}: ${data.productName ?? data.text ?? 'unknown'}${price}${variant} at ${e.url}`;
     })
     .join('\n');
 
   const productPages = session.pageDomSummaries
     .filter(p => p.productElements.length > 0)
-    .map(
-      p =>
-        `${p.url}: ${p.productElements.map(pe => `${pe.name ?? 'unknown'} (${pe.price ?? 'no price'}, ${pe.stock ?? 'unknown stock'})`).join(', ')}`
-    )
+    .map(p => {
+      const products = p.productElements
+        .map(
+          pe =>
+            `${pe.name ?? 'unknown'} (price: ${pe.price ?? 'not shown'}, stock: ${pe.stock ?? 'unknown'})`
+        )
+        .join(', ');
+      const timeOnPage = session.journey.find(j => j.url === p.url);
+      const timeStr = timeOnPage
+        ? ` [${Math.round(timeOnPage.timeOnPageMs / 1000)}s on page]`
+        : '';
+      return `${p.url}${timeStr}: ${products}`;
+    })
     .join('\n');
 
   const cartInfo = session.exitContext.cartState
-    ? `Cart has ${session.exitContext.cartState.itemCount} items`
+    ? `Cart has ${(session.exitContext.cartState as Record<string, unknown>).itemCount} items. Last item: ${JSON.stringify((session.exitContext.cartState as Record<string, unknown>).lastItem ?? {})}`
     : 'Cart empty or not used';
 
-  const journeyHighlights = session.journey
-    .map(
-      p =>
-        `${p.url} (${Math.round(p.timeOnPageMs / 1000)}s) - ${p.interactions.filter(i => i.type === 'click').length} clicks`
-    )
-    .join('\n');
-
-  const prompt = `You are an e-commerce conversion analyst. Analyze this web session for purchase intent and conversion barriers.
+  const prompt = `You are an e-commerce conversion analyst. Analyze this REAL user session to understand purchase intent and what specific barriers prevented conversion.
 
 Session: ${session.metadata.deviceType} | Duration: ${Math.round(session.durationMs / 1000)}s
 Referrer: ${session.metadata.referrer ?? 'direct'}
 
-E-commerce Events Timeline:
-${ecommerceTimeline || 'No e-commerce events'}
+${journeyText}
 
-Product Pages Visited:
+E-commerce Events Timeline:
+${ecommerceTimeline || 'No e-commerce events detected'}
+
+Product Pages & Prices Viewed:
 ${productPages || 'No product pages detected'}
 
 Cart Status: ${cartInfo}
 
-Journey:
-${journeyHighlights}
-
 Exit: Left from ${session.exitContext.lastPage} after "${session.exitContext.lastAction}"
 
+IMPORTANT: Be SPECIFIC about what products/prices the user viewed and what actions they took. Reference actual prices, product names, and the user's specific behavior.
+
 Analyze:
-1. What was the user's purchase intent level (browsing, researching, ready to buy)?
-2. Cart abandonment signals - did they add items but not proceed?
-3. Price sensitivity indicators (comparing products, visiting sale pages, hesitating on checkout)
-4. Product interest patterns (which products got most attention via time/clicks/zooms)
-5. What conversion barriers did this session reveal?
+1. Purchase intent - What specific actions indicate browsing vs. buying intent?
+2. Price reaction - Did the user view prices and leave? Compare products by price? Abandon after seeing total?
+3. Product interest - Which specific products got attention (time spent, image zooms, variant selections)?
+4. Cart behavior - Did they add items but not checkout? What was the last action before leaving?
+5. Conversion barriers - What SPECIFIC thing likely stopped this user from converting? (e.g., "Viewed $299 headphones for 60s, selected color variant, but left after seeing $15 shipping")
 
 Respond ONLY with valid JSON:
 {
   "findings": [
-    {"observation": "string", "evidence": "string", "significance": "high|medium|low"}
+    {"observation": "string - specific commerce insight", "evidence": "string - cite actual products, prices, and user actions", "significance": "high|medium|low"}
   ],
   "confidence": 0.0-1.0,
   "tags": ["string"]
 }`;
 
-  const response = await runAiPrompt(ai, prompt, 512);
+  const response = await runAiPrompt(ai, prompt, 768);
   if (!response) return buildFallbackAgentResult(AGENT_NAME);
 
   const parsed = parseJsonFromLlm<{
