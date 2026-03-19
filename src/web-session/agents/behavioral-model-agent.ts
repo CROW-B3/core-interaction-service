@@ -5,6 +5,7 @@ import type {
 } from './types';
 import {
   buildFallbackAgentResult,
+  buildJourneyNarrativeText,
   parseJsonFromLlm,
   runAiPrompt,
 } from './types';
@@ -16,61 +17,67 @@ export async function runBehavioralModelAgent(
   session: PreprocessedSession,
   _issues: DeterministicIssue[]
 ): Promise<AgentResult> {
-  const interactionPattern = session.journey
-    .map(p => {
-      const clickCount = p.interactions.filter(i => i.type === 'click').length;
-      const scrollCount = p.interactions.filter(
-        i => i.type === 'scroll'
-      ).length;
-      const hoverCount = p.interactions.filter(i => i.type === 'hover').length;
-      return `${p.url}: ${Math.round(p.timeOnPageMs / 1000)}s, ${clickCount} clicks, ${scrollCount} scrolls, ${hoverCount} hovers`;
+  const journeyText = buildJourneyNarrativeText(session);
+
+  const ecommerceActions = session.ecommerceEvents
+    .map(e => {
+      const d = e.data ?? {};
+      const price = d.price ? ` ($${d.price})` : '';
+      return `[${new Date(e.timestamp).toISOString()}] ${e.type}: ${d.productName ?? d.text ?? 'unknown'}${price} at ${e.url}`;
     })
     .join('\n');
 
-  const ecommerceActions = session.ecommerceEvents
-    .map(
-      e =>
-        `${e.type}: ${e.data?.productName ?? e.data?.text ?? 'unknown'} at ${e.url}`
-    )
+  const rageClickDetails = session.rageClicks
+    .map(e => {
+      const target =
+        e.data?.text ??
+        e.data?.ariaLabel ??
+        e.data?.tagName ??
+        'unknown element';
+      return `Rage-clicked "${target}" at ${e.url}`;
+    })
     .join('\n');
 
   const exitInfo = `Last page: ${session.exitContext.lastPage}
 Last action: ${session.exitContext.lastAction}
-Cart: ${session.exitContext.cartState ? `${session.exitContext.cartState.itemCount} items` : 'empty/none'}`;
+Cart: ${session.exitContext.cartState ? `${(session.exitContext.cartState as Record<string, unknown>).itemCount} items` : 'empty/none'}`;
 
-  const prompt = `You are a behavioral psychology analyst for web user behavior. Analyze this session for psychological patterns.
+  const prompt = `You are a behavioral psychology analyst. Analyze this REAL user session to understand psychological patterns from their ACTUAL actions and what they saw on each page.
 
 Session: ${session.metadata.deviceType} / ${session.metadata.browser} | Duration: ${Math.round(session.durationMs / 1000)}s
 Referrer: ${session.metadata.referrer ?? 'direct'}
 
-Interaction Patterns:
-${interactionPattern}
+${journeyText}
 
 E-commerce Actions:
 ${ecommerceActions || 'None'}
 
+Rage Click Details:
+${rageClickDetails || 'None'}
+
 ${exitInfo}
 
-Rage clicks: ${session.rageClicks.length}
-Event counts: ${JSON.stringify(session.eventCounts)}
+IMPORTANT: Base your analysis on the SPECIFIC actions the user took and the ACTUAL content they viewed. Reference real elements, prices, page content, and user actions you can see in the data.
 
-Analyze behavioral psychology patterns:
-1. Hesitation signals (long dwell times, repeated page visits, back-and-forth navigation)
-2. Frustration indicators (rage clicks, rapid scrolling, form abandonment)
-3. Decision fatigue (many product views without action, comparison behavior)
-4. Price sensitivity (price page visits, coupon searches, cart modifications)
-5. Intent level (browsing vs. high purchase intent)
+Analyze:
+1. Hesitation signals - Did the user revisit pages, spend long time on specific content, or go back-and-forth?
+2. Frustration indicators - What specific elements caused rage clicks? What broke the flow?
+3. Decision fatigue - Were they comparing products/options without committing?
+4. Price sensitivity - Did they view pricing, compare prices, or abandon after seeing a price?
+5. Intent signals - What was their likely goal based on the pages visited and actions taken?
+
+For each finding, cite the SPECIFIC user action or page content as evidence (e.g., "User spent 45s on pricing page viewing $99/mo plan, then navigated away without clicking CTA").
 
 Respond ONLY with valid JSON:
 {
   "findings": [
-    {"observation": "string", "evidence": "string", "significance": "high|medium|low"}
+    {"observation": "string - specific behavioral insight", "evidence": "string - cite actual user actions/content from the journey", "significance": "high|medium|low"}
   ],
   "confidence": 0.0-1.0,
   "tags": ["string"]
 }`;
 
-  const response = await runAiPrompt(ai, prompt, 512);
+  const response = await runAiPrompt(ai, prompt, 768);
   if (!response) return buildFallbackAgentResult(AGENT_NAME);
 
   const parsed = parseJsonFromLlm<{
