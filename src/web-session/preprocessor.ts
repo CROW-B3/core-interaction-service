@@ -1,5 +1,7 @@
 import type {
   ExitContext,
+  JourneyStep,
+  NavigationPattern,
   PageDomSummary,
   PageInteraction,
   PageVisit,
@@ -7,6 +9,7 @@ import type {
   PreprocessedSession,
   SessionAnalysisPayload,
   SessionEvent,
+  UserJourneyNarrative,
 } from './agents/types';
 import { chunkAndSummarizeDom } from './dom-chunker';
 
@@ -28,6 +31,7 @@ export async function preprocessSession(
   const exitContext = buildExitContext(regularEvents, pageDomSummaries);
   const performance = extractPerformanceMetrics(regularEvents);
   const eventCounts = countEventsByType(regularEvents);
+  const journeyNarrative = buildJourneyNarrative(journey, pageDomSummaries);
 
   const startedAt = payload.metadata.startedAt
     ? new Date(payload.metadata.startedAt).getTime()
@@ -44,6 +48,7 @@ export async function preprocessSession(
     metadata: payload.metadata,
     durationMs: endedAt - startedAt,
     journey,
+    journeyNarrative,
     exitContext,
     performance,
     errors: regularEvents.filter(e => e.type === 'error'),
@@ -88,6 +93,7 @@ function buildJourney(
       type: e.type,
       timestamp: e.timestamp,
       detail: summarizeEventDetail(e),
+      elementContext: extractElementContext(e),
     }));
 
     visits.push({
@@ -107,12 +113,34 @@ function summarizeEventDetail(event: SessionEvent): string | undefined {
   if (!event.data) return undefined;
   const d = event.data;
 
-  if (event.type === 'click' && d.text) return `Clicked: ${d.text}`;
+  if (event.type === 'click') {
+    const target = d.text ?? d.ariaLabel ?? d.tagName ?? 'element';
+    const href = d.href ? ` → ${d.href}` : '';
+    return `Clicked "${target}"${href}`;
+  }
+  if (event.type === 'rage_click') {
+    const target = d.text ?? d.ariaLabel ?? d.tagName ?? 'element';
+    return `Rage-clicked "${target}" (${d.clickCount ?? 3}+ times)`;
+  }
   if (event.type === 'scroll' && d.scrollDepth)
     return `Scrolled to ${d.scrollDepth}%`;
   if (event.type === 'form' && d.fieldName) return `Form field: ${d.fieldName}`;
-  if (event.type === 'add_to_cart' && d.productName)
-    return `Added to cart: ${d.productName}`;
+  if (event.type === 'add_to_cart') {
+    const name = d.productName ?? d.text ?? 'unknown item';
+    const price = d.price ? ` ($${d.price})` : '';
+    return `Added to cart: ${name}${price}`;
+  }
+  if (event.type === 'variant_select') {
+    const name = d.variantName ?? d.text ?? 'unknown';
+    const price = d.price ? ` ($${d.price})` : '';
+    return `Selected variant: ${name}${price}`;
+  }
+  if (event.type === 'image_zoom') {
+    return `Zoomed product image${d.imageIndex !== undefined ? ` #${d.imageIndex}` : ''}`;
+  }
+  if (event.type === 'navigation') {
+    return `Navigated to ${d.toUrl ?? d.url ?? 'unknown'}`;
+  }
   if (event.type === 'web_vital' && d.name) return `${d.name}: ${d.value}`;
   if (event.type === 'api_error' && d.statusCode)
     return `API ${d.statusCode}: ${d.url ?? ''}`;
@@ -177,4 +205,156 @@ function countEventsByType(events: SessionEvent[]): Record<string, number> {
     counts[event.type] = (counts[event.type] ?? 0) + 1;
   }
   return counts;
+}
+
+function extractElementContext(
+  event: SessionEvent
+): PageInteraction['elementContext'] {
+  if (!event.data) return undefined;
+  const d = event.data;
+
+  if (
+    event.type !== 'click' &&
+    event.type !== 'rage_click' &&
+    event.type !== 'form'
+  )
+    return undefined;
+
+  return {
+    tag: d.tagName as string | undefined,
+    text: truncate(d.text as string | undefined, 100),
+    id: d.id as string | undefined,
+    className: truncate(d.className as string | undefined, 80),
+    ariaLabel: d.ariaLabel as string | undefined,
+    href: d.href as string | undefined,
+    domPath: truncate(
+      Array.isArray(d.domPath)
+        ? (d.domPath as { tag: string; text?: string }[])
+            .map(p => p.tag + (p.text ? `(${p.text})` : ''))
+            .join(' > ')
+        : undefined,
+      200
+    ),
+  };
+}
+
+function truncate(
+  str: string | undefined | null,
+  maxLen: number
+): string | undefined {
+  if (!str) return undefined;
+  return str.length > maxLen ? `${str.slice(0, maxLen)}...` : str;
+}
+
+function buildJourneyNarrative(
+  journey: PageVisit[],
+  domSummaries: PageDomSummary[]
+): UserJourneyNarrative {
+  const domByUrl = new Map<string, PageDomSummary>();
+  for (const summary of domSummaries) {
+    domByUrl.set(summary.url, summary);
+  }
+
+  const steps: JourneyStep[] = journey.map((visit, i) => {
+    const dom = visit.domSummary ?? domByUrl.get(visit.url);
+
+    const keyActions = visit.interactions
+      .filter(
+        inter =>
+          inter.type === 'click' ||
+          inter.type === 'rage_click' ||
+          inter.type === 'add_to_cart' ||
+          inter.type === 'variant_select' ||
+          inter.type === 'form' ||
+          inter.type === 'scroll'
+      )
+      .map(inter => {
+        if (inter.detail) return inter.detail;
+        if (inter.elementContext?.text)
+          return `${inter.type}: "${inter.elementContext.text}"`;
+        return inter.type;
+      })
+      .slice(0, 10);
+
+    const exitInteraction = visit.interactions[visit.interactions.length - 1];
+    const exitAction = exitInteraction
+      ? (exitInteraction.detail ?? exitInteraction.type)
+      : undefined;
+
+    return {
+      stepNumber: i + 1,
+      url: visit.url,
+      pageTitle: dom?.title,
+      pagePurpose: dom?.purpose,
+      timeOnPageMs: visit.timeOnPageMs,
+      keyActions,
+      domContentSeen: dom?.visibleContent,
+      productsViewed:
+        dom?.productElements && dom.productElements.length > 0
+          ? dom.productElements
+          : undefined,
+      exitAction,
+    };
+  });
+
+  const urlCounts = new Map<string, number>();
+  for (const visit of journey) {
+    urlCounts.set(visit.url, (urlCounts.get(visit.url) ?? 0) + 1);
+  }
+
+  const revisitedPages = [...urlCounts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([url, visitCount]) => ({ url, visitCount }));
+
+  const urls = journey.map(v => v.url);
+  const pattern = detectNavigationPattern(urls);
+
+  return {
+    steps,
+    pattern,
+    revisitedPages,
+    totalPagesVisited: journey.length,
+    uniquePagesVisited: urlCounts.size,
+  };
+}
+
+function detectNavigationPattern(urls: string[]): NavigationPattern {
+  if (urls.length <= 1) {
+    return {
+      type: 'bounce',
+      description: 'User visited only one page before leaving',
+      urls,
+    };
+  }
+
+  const hasBackAndForth =
+    urls.length >= 3 &&
+    urls.some((url, i) => i >= 2 && url === urls[i - 2] && url !== urls[i - 1]);
+
+  if (hasBackAndForth) {
+    return {
+      type: 'back_and_forth',
+      description:
+        'User navigated back and forth between pages, suggesting comparison or hesitation',
+      urls,
+    };
+  }
+
+  const uniqueUrls = new Set(urls);
+  const hasLoop = urls.length > uniqueUrls.size && urls.length >= 4;
+
+  if (hasLoop) {
+    return {
+      type: 'loop',
+      description:
+        'User revisited pages, suggesting they were looking for something or comparing options',
+      urls,
+    };
+  }
+
+  return {
+    type: 'linear',
+    description: 'User followed a linear path through the site',
+    urls,
+  };
 }
