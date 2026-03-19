@@ -1,4 +1,5 @@
 import type {
+  PreprocessedSession,
   RedTeamChallenge,
   RedTeamResult,
   SynthesisResult,
@@ -6,6 +7,7 @@ import type {
 } from './types';
 import {
   buildFallbackAgentResult,
+  buildJourneyNarrativeText,
   parseJsonFromLlm,
   runAiPrompt,
 } from './types';
@@ -14,12 +16,13 @@ const AGENT_NAME = 'red-team-agent';
 
 export async function runRedTeamAgent(
   ai: Ai,
-  synthesis: SynthesisResult
+  synthesis: SynthesisResult,
+  session: PreprocessedSession
 ): Promise<RedTeamResult> {
   const whySummary = synthesis.whyConclusions
     .map(
       (w, i) =>
-        `${i + 1}. "${w.why}" (confidence: ${w.confidence}, category: ${w.category})\n   Evidence: ${w.supportingEvidence.join('; ')}`
+        `${i + 1}. "${w.why}" (confidence: ${w.confidence}, category: ${w.category})\n   Evidence: ${w.supportingEvidence.join('; ')}${w.domEvidence ? `\n   DOM Evidence: ${w.domEvidence}` : ''}`
     )
     .join('\n');
 
@@ -27,7 +30,16 @@ export async function runRedTeamAgent(
     .map(f => `- ${f.observation} [${f.significance}]`)
     .join('\n');
 
+  const journeyText = buildJourneyNarrativeText(session);
+
   const prompt = `You are a red team analyst. Challenge the session analysis conclusions and identify biases or alternative explanations.
+
+User Journey Context:
+${journeyText}
+
+Exit page: ${session.exitContext.lastPage}
+Last action: ${session.exitContext.lastAction}
+Exit page content: ${session.exitContext.lastDomSummary?.visibleContent?.slice(0, 200) ?? 'unknown'}
 
 Synthesis Conclusions:
 ${whySummary || 'No conclusions provided'}
@@ -40,8 +52,13 @@ For each "why" conclusion:
 2. Provide an alternative explanation
 3. Identify cognitive biases (confirmation bias, recency bias, etc.)
 4. Adjust the confidence score based on your review
+5. Validate DOM evidence claims against the journey data above - are the cited products, prices, and content actually present?
 
-IMPORTANT: Keep the "why" statements SPECIFIC and narrative-based. Do NOT replace specific whys with generic category labels. Refine and improve the specificity of each why if possible.
+IMPORTANT:
+- Keep the "why" statements SPECIFIC and narrative-based. Do NOT replace specific whys with generic category labels.
+- Refine and IMPROVE the specificity of each why if possible - ADD details from the journey data above.
+- If a why makes unsubstantiated claims about DOM content, either correct it with actual data from the journey or lower the confidence.
+- Challenge whys that use vague language like "the user was dissatisfied" without citing specific content.
 
 Produce a final set of refined "whys" with adjusted confidence scores.
 
@@ -68,12 +85,13 @@ Respond ONLY with valid JSON:
       "category": "string",
       "supportingEvidence": ["string"],
       "recommendations": ["string"],
-      "journeyEvidence": "string - 1-2 sentence user journey summary"
+      "journeyEvidence": "string - 1-2 sentence user journey summary",
+      "domEvidence": "string - specific DOM content the user saw (product names, prices, error messages)"
     }
   ]
 }`;
 
-  const response = await runAiPrompt(ai, prompt, 1024);
+  const response = await runAiPrompt(ai, prompt, 1536);
   if (!response) {
     return {
       ...buildFallbackAgentResult(AGENT_NAME),
@@ -133,8 +151,8 @@ Respond ONLY with valid JSON:
       recommendations: Array.isArray(w.recommendations)
         ? w.recommendations
         : [],
-      journeyEvidence: (w as unknown as Record<string, unknown>)
-        .journeyEvidence as string | undefined,
+      journeyEvidence: w.journeyEvidence,
+      domEvidence: w.domEvidence,
     })),
   };
 }
