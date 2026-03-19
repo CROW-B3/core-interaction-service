@@ -59,6 +59,15 @@ export interface PageInteraction {
   type: string;
   timestamp: number;
   detail?: string;
+  elementContext?: {
+    tag?: string;
+    text?: string;
+    id?: string;
+    className?: string;
+    ariaLabel?: string;
+    href?: string;
+    domPath?: string;
+  };
 }
 
 export interface ExitContext {
@@ -76,6 +85,32 @@ export interface PerformanceMetrics {
   ttfb?: number;
 }
 
+export interface NavigationPattern {
+  type: 'linear' | 'back_and_forth' | 'loop' | 'bounce';
+  description: string;
+  urls: string[];
+}
+
+export interface UserJourneyNarrative {
+  steps: JourneyStep[];
+  pattern: NavigationPattern;
+  revisitedPages: { url: string; visitCount: number }[];
+  totalPagesVisited: number;
+  uniquePagesVisited: number;
+}
+
+export interface JourneyStep {
+  stepNumber: number;
+  url: string;
+  pageTitle?: string;
+  pagePurpose?: string;
+  timeOnPageMs: number;
+  keyActions: string[];
+  domContentSeen?: string;
+  productsViewed?: { name?: string; price?: string; stock?: string }[];
+  exitAction?: string;
+}
+
 export interface PreprocessedSession {
   sessionId: string;
   projectId: string;
@@ -84,6 +119,7 @@ export interface PreprocessedSession {
   metadata: SessionMetadata;
   durationMs: number;
   journey: PageVisit[];
+  journeyNarrative: UserJourneyNarrative;
   exitContext: ExitContext;
   performance: PerformanceMetrics;
   errors: SessionEvent[];
@@ -131,6 +167,7 @@ export interface WhyConclusion {
   category: string;
   supportingEvidence: string[];
   recommendations: string[];
+  journeyEvidence?: string;
 }
 
 export interface SynthesisResult extends AgentResult {
@@ -200,4 +237,44 @@ export function buildFallbackAgentResult(agentName: string): AgentResult {
     confidence: 0.1,
     tags: ['agent-failed'],
   };
+}
+
+export function buildJourneyNarrativeText(
+  session: PreprocessedSession
+): string {
+  const narrative = session.journeyNarrative;
+  if (!narrative || narrative.steps.length === 0) return 'No journey data.';
+
+  const stepsText = narrative.steps
+    .map(step => {
+      const timeStr = `${Math.round(step.timeOnPageMs / 1000)}s`;
+      const title = step.pageTitle ? ` "${step.pageTitle}"` : '';
+      const purpose = step.pagePurpose ? ` (${step.pagePurpose})` : '';
+      const products =
+        step.productsViewed && step.productsViewed.length > 0
+          ? `\n     Products seen: ${step.productsViewed.map(p => `${p.name ?? 'unknown'} ${p.price ? `at ${p.price}` : ''} ${p.stock ? `[${p.stock}]` : ''}`).join(', ')}`
+          : '';
+      const actions =
+        step.keyActions.length > 0
+          ? `\n     Actions: ${step.keyActions.join(' → ')}`
+          : '\n     Actions: none (passive viewing)';
+      const content = step.domContentSeen
+        ? `\n     Visible content: ${step.domContentSeen.slice(0, 200)}`
+        : '';
+      const exit = step.exitAction
+        ? `\n     Left after: ${step.exitAction}`
+        : '';
+
+      return `  Step ${step.stepNumber}: ${step.url}${title}${purpose} [${timeStr}]${products}${actions}${content}${exit}`;
+    })
+    .join('\n\n');
+
+  const patternText = `Navigation pattern: ${narrative.pattern.type} - ${narrative.pattern.description}`;
+  const revisitText =
+    narrative.revisitedPages.length > 0
+      ? `\nRevisited pages: ${narrative.revisitedPages.map(r => `${r.url} (${r.visitCount}x)`).join(', ')}`
+      : '';
+  const statsText = `\nPages: ${narrative.totalPagesVisited} total, ${narrative.uniquePagesVisited} unique`;
+
+  return `${patternText}${revisitText}${statsText}\n\nUser Journey:\n${stepsText}`;
 }
