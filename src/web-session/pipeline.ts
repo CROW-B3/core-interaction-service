@@ -43,7 +43,8 @@ export async function runSessionAnalysis(
       payload.projectId,
       payload.sessionId,
       payload.metadata,
-      result
+      result,
+      preprocessed
     );
     console.warn(`[Pipeline] Results stored for session ${payload.sessionId}`);
   } catch (err) {

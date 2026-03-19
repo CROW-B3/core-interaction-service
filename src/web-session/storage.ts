@@ -1,4 +1,8 @@
-import type { AnalysisPipelineResult, SessionMetadata } from './agents/types';
+import type {
+  AnalysisPipelineResult,
+  PreprocessedSession,
+  SessionMetadata,
+} from './agents/types';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 
@@ -7,7 +11,8 @@ export async function storeAnalysisResult(
   projectId: string,
   sessionId: string,
   metadata: SessionMetadata,
-  result: AnalysisPipelineResult
+  result: AnalysisPipelineResult,
+  session?: PreprocessedSession
 ): Promise<void> {
   const orm = drizzle(db, { schema });
 
@@ -32,8 +37,33 @@ export async function storeAnalysisResult(
         category: w.category,
         confidence: w.confidence,
         journeyEvidence: w.journeyEvidence,
+        domEvidence: w.domEvidence,
         supportingEvidence: w.supportingEvidence,
       })),
+      ...(session
+        ? {
+            userJourney: {
+              steps: session.journeyNarrative.steps,
+              pattern: session.journeyNarrative.pattern,
+              totalPagesVisited: session.journeyNarrative.totalPagesVisited,
+              uniquePagesVisited: session.journeyNarrative.uniquePagesVisited,
+              revisitedPages: session.journeyNarrative.revisitedPages,
+            },
+            exitContext: {
+              lastPage: session.exitContext.lastPage,
+              lastAction: session.exitContext.lastAction,
+              cartState: session.exitContext.cartState,
+              lastDomSummary: session.exitContext.lastDomSummary,
+            },
+            domSummaries: session.pageDomSummaries.map(d => ({
+              url: d.url,
+              title: d.title,
+              purpose: d.purpose,
+              visibleContent: d.visibleContent,
+              productElements: d.productElements,
+            })),
+          }
+        : {}),
     }),
     summary,
     confidence: result.overallConfidence,
@@ -62,21 +92,15 @@ function buildSummary(
   }
 
   const primaryWhy = topWhys[0];
-  const primaryText =
-    primaryWhy.why.length > 120
-      ? `${primaryWhy.why.slice(0, 120)}...`
-      : primaryWhy.why;
 
-  const secondaryCategories = topWhys
+  const secondaryWhys = topWhys
     .slice(1)
-    .map(w => `${w.category}(${w.confidence.toFixed(2)})`)
-    .join(', ');
+    .map(w => `${w.why} [${w.category}:${w.confidence.toFixed(2)}]`)
+    .join('; ');
 
-  const secondary = secondaryCategories
-    ? ` | Also: ${secondaryCategories}`
-    : '';
+  const secondary = secondaryWhys ? ` | Also: ${secondaryWhys}` : '';
 
-  return `${layerLabel} | ${primaryText} [${primaryWhy.category}:${primaryWhy.confidence.toFixed(2)}]${secondary} | ${metadata.deviceType}/${metadata.browser}`;
+  return `${layerLabel} | ${primaryWhy.why} [${primaryWhy.category}:${primaryWhy.confidence.toFixed(2)}]${secondary} | ${metadata.deviceType}/${metadata.browser}`;
 }
 
 function buildTags(result: AnalysisPipelineResult): string[] {
@@ -95,6 +119,9 @@ function buildTags(result: AnalysisPipelineResult): string[] {
 
   const hasJourneyEvidence = result.finalWhys.some(w => w.journeyEvidence);
   if (hasJourneyEvidence) tags.push('evidence_backed');
+
+  const hasDomEvidence = result.finalWhys.some(w => w.domEvidence);
+  if (hasDomEvidence) tags.push('dom_evidence');
 
   return tags;
 }
