@@ -6,6 +6,7 @@ export interface Environment {
   CCTV_QUEUE: Queue<CctvBatchQueueMessage>;
   AUTH_SERVICE_URL: string;
   PRODUCT_SERVICE_URL: string;
+  WEB_INGEST_SERVICE_URL: string;
   SYSTEM_SECRET: string;
   INTERNAL_GATEWAY_KEY?: string;
   AI: Ai;
