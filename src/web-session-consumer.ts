@@ -29,10 +29,20 @@ interface WebEvent {
   data: unknown;
 }
 
+interface RRwebSnapshotRow {
+  id: string;
+  sessionId: string;
+  timestamp: number;
+  eventType: string;
+  data: string;
+  compressed: number;
+}
+
 interface SessionDataResponse {
   success: boolean;
   session: WebSession;
   events: WebEvent[];
+  rrwebSnapshots?: RRwebSnapshotRow[];
 }
 
 function buildInteractionData(session: WebSession, events: WebEvent[]): string {
@@ -81,7 +91,7 @@ export async function processWebSessionExpiry(
   }
 
   const body = (await response.json()) as SessionDataResponse;
-  const { session, events } = body;
+  const { session, events, rrwebSnapshots } = body;
 
   const data = buildInteractionData(session, events);
   const summary = buildSummary(session, events);
@@ -101,16 +111,40 @@ export async function processWebSessionExpiry(
     createdAt: new Date(),
   });
 
-  // Also run the analysis pipeline (without DOM data since this path has no rrweb snapshots)
+  // Convert rrweb snapshots to events and merge into analysis payload
+  const rrwebEvents = (rrwebSnapshots ?? []).map(snapshot => {
+    // Timestamps from D1 may be in seconds; convert to ms if needed
+    const timestampMs =
+      snapshot.timestamp < 1e12
+        ? snapshot.timestamp * 1000
+        : snapshot.timestamp;
+
+    let parsedData: Record<string, unknown> | null = null;
+    try {
+      parsedData = { rrwebEvent: JSON.parse(snapshot.data) };
+    } catch {
+      parsedData = null;
+    }
+
+    return {
+      type: 'rrweb_snapshot' as const,
+      timestamp: timestampMs,
+      data: parsedData,
+    };
+  });
+
   const analysisPayload: SessionAnalysisPayload = {
     sessionId: session.id,
     projectId: 'unknown', // Queue path doesn't have projectId
-    events: events.map(e => ({
-      type: e.type,
-      timestamp: e.timestamp,
-      url: e.url,
-      data: e.data as Record<string, unknown> | null,
-    })),
+    events: [
+      ...events.map(e => ({
+        type: e.type,
+        timestamp: e.timestamp,
+        url: e.url,
+        data: e.data as Record<string, unknown> | null,
+      })),
+      ...rrwebEvents,
+    ].sort((a, b) => a.timestamp - b.timestamp),
     metadata: {
       userAgent: session.userAgent,
       browser: session.browser,
