@@ -9,7 +9,6 @@ import type {
 const ANALYSIS_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 const VISION_MODEL = '@cf/llava-hf/llava-1.5-7b-hf';
 
-// Retry configuration
 const MAX_RETRIES = 5;
 const INITIAL_DELAY_MS = 1000;
 const MAX_DELAY_MS = 30000;
@@ -34,7 +33,6 @@ async function withRetry<T>(
       lastError = error as Error;
       const errorMessage = lastError.message || String(error);
 
-      // Check if it's a rate limit or transient error
       const isRetryable =
         errorMessage.includes('1031') || // Rate limit
         errorMessage.includes('rate') ||
@@ -51,7 +49,6 @@ async function withRetry<T>(
         throw lastError;
       }
 
-      // Add jitter to prevent thundering herd
       const jitter = Math.random() * 0.3 * delay;
       const sleepTime = Math.min(delay + jitter, MAX_DELAY_MS);
 
@@ -92,7 +89,6 @@ async function runAgent(
   const analysisTime = Date.now() - startTime;
   const rawAnalysis = (response as any).response || '';
 
-  // Parse insights from the response
   const insights = parseInsightsFromResponse(rawAnalysis, agentName);
 
   return {
@@ -117,7 +113,6 @@ function parseInsightsFromResponse(
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Look for numbered items, bullet points, or headers
     if (/^(?:\d+\.|[-•]|\*{1,2}|##)/.test(trimmed)) {
       if (currentInsight?.observation) {
         insights.push({
@@ -142,7 +137,6 @@ function parseInsightsFromResponse(
     }
   }
 
-  // Don't forget the last insight
   if (currentInsight?.observation) {
     insights.push({
       category: agentName,
@@ -176,8 +170,6 @@ function determineSeverity(text: string): 'info' | 'warning' | 'critical' {
   }
   return 'info';
 }
-
-// ==================== AGENT DEFINITIONS ====================
 
 async function runBehavioralPsychologist(
   ai: Ai,
@@ -548,7 +540,6 @@ Your job is to:
 4. Create an executive summary suitable for stakeholders
 5. Provide a clear action plan`;
 
-  // Summarize each agent's top insights to fit context window
   const agentSummaries = allResults
     .map(r => {
       const topInsights = r.insights
@@ -602,7 +593,6 @@ Format your response clearly with headers.`;
 
   const rawResponse = (response as any).response || '';
 
-  // Extract key findings and recommendations
   const keyFindings: string[] = [];
   const recommendations: string[] = [];
 
@@ -630,8 +620,6 @@ Format your response clearly with headers.`;
     recommendations: recommendations.slice(0, 10),
   };
 }
-
-// ==================== MAIN ORCHESTRATOR ====================
 
 export async function runMultiAgentAnalysis(
   ai: Ai,
@@ -685,11 +673,9 @@ SESSION METADATA:
     );
   }
 
-  // Run synthesis agent
   console.warn(`[Multi-Agent Analysis] Running synthesis agent...`);
   const synthesis = await runSynthesisAgent(ai, agentResults, sessionContext);
 
-  // Combine all insights
   const allInsights = agentResults.flatMap(r => r.insights);
 
   const totalTime = Date.now() - overallStartTime;
@@ -706,7 +692,6 @@ SESSION METADATA:
   };
 }
 
-// Vision analysis for screenshots
 export async function analyzeScreenshot(
   ai: Ai,
   imageBase64: string,

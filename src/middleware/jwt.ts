@@ -22,7 +22,7 @@ const fetchJWKS = async (authServiceUrl: string) => {
     throw new Error('Failed to fetch JWKS');
   }
   cachedJWKS = (await response.json()) as Record<string, unknown>;
-  cacheExpiry = now + 300; // 5-minute TTL — short enough to honour key rotations
+  cacheExpiry = now + 300;
   return cachedJWKS;
 };
 
@@ -61,9 +61,6 @@ export const createJWTMiddleware = (env: Environment) => {
       return next();
     }
 
-    // Accept gateway-authenticated requests: gateway injects X-Internal-Key + X-Organization-Id
-    // after verifying the user session. Trust the gateway's resolved context instead of
-    // re-verifying the JWT, which may fail if the auth service is unreachable.
     const internalKey = c.req.header('X-Internal-Key');
     const orgIdFromGateway = c.req.header('X-Organization-Id');
     if (

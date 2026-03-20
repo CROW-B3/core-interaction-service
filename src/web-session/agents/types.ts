@@ -1,7 +1,5 @@
 export const LLAMA_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
-// --- Payload from DO ---
-
 export interface SessionAnalysisPayload {
   sessionId: string;
   projectId: string;
@@ -31,8 +29,6 @@ export interface SessionMetadata {
   endedAt: string | null;
 }
 
-// --- DOM Chunker ---
-
 export interface PageDomSummary {
   url: string;
   title: string;
@@ -43,8 +39,6 @@ export interface PageDomSummary {
   errorIndicators: string[];
   formFields: string[];
 }
-
-// --- Preprocessor ---
 
 export interface PageVisit {
   url: string;
@@ -131,11 +125,7 @@ export interface PreprocessedSession {
   pageDomSummaries: PageDomSummary[];
 }
 
-// --- Classifier ---
-
 export type SessionLayer = 'deterministic' | 'behavioral' | 'dead';
-
-// --- Deterministic Detector ---
 
 export interface DeterministicIssue {
   type: string;
@@ -145,8 +135,6 @@ export interface DeterministicIssue {
   timestamp?: number;
   metric?: number;
 }
-
-// --- Agent Results ---
 
 export interface AgentFinding {
   observation: string;
@@ -200,8 +188,6 @@ export interface AnalysisPipelineResult {
   overallConfidence: number;
   processingTimeMs: number;
 }
-
-// --- AI Helper ---
 
 export function parseJsonFromLlm<T>(responseText: string): T | null {
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);

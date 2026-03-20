@@ -114,9 +114,7 @@ export async function processWebSessionExpiry(
     createdAt: new Date(),
   });
 
-  // Convert rrweb snapshots to events and merge into analysis payload
   const rrwebEvents = (rrwebSnapshots ?? []).map(snapshot => {
-    // Timestamps from D1 may be in seconds; convert to ms if needed
     const timestampMs =
       snapshot.timestamp < 1e12
         ? snapshot.timestamp * 1000
