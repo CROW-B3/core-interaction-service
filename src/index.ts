@@ -170,7 +170,7 @@ app.openapi(CreateInteractionRoute, async c => {
 app.openapi(GetInteractionsByOrgRoute, async c => {
   const db = drizzle(c.env.DB, { schema });
   const { orgId: orgIdParam } = c.req.valid('param');
-  const callerOrgId = c.req.header('X-Organization-Id');
+  const callerOrgId = c.req.valid('header')['x-organization-id'];
 
   if (!callerOrgId || callerOrgId !== orgIdParam) {
     return new Response(
@@ -234,7 +234,7 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
 app.openapi(GetInteractionsSummaryRoute, async c => {
   const db = drizzle(c.env.DB, { schema });
   const { orgId: orgIdParam } = c.req.valid('param');
-  const callerOrgId2 = c.req.header('X-Organization-Id');
+  const callerOrgId2 = c.req.valid('header')['x-organization-id'];
 
   if (!callerOrgId2 || callerOrgId2 !== orgIdParam) {
     return new Response(
@@ -342,10 +342,6 @@ app.openapi(AnalyzeInteractionsRoute, async c => {
       'Container returned non-OK status:',
       containerResponse.status,
       errText
-    );
-    console.error(
-      'Container returned non-OK status:',
-      containerResponse.status
     );
     return c.json(
       {

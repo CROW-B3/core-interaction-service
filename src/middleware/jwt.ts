@@ -61,6 +61,23 @@ export const createJWTMiddleware = (env: Environment) => {
       return next();
     }
 
+    // Accept gateway-authenticated requests: gateway injects X-Internal-Key + X-Organization-Id
+    // after verifying the user session. Trust the gateway's resolved context instead of
+    // re-verifying the JWT, which may fail if the auth service is unreachable.
+    const internalKey = c.req.header('X-Internal-Key');
+    const orgIdFromGateway = c.req.header('X-Organization-Id');
+    if (
+      internalKey &&
+      env.INTERNAL_GATEWAY_KEY &&
+      internalKey === env.INTERNAL_GATEWAY_KEY &&
+      orgIdFromGateway
+    ) {
+      c.set('isSystem', false);
+      c.set('userId', '');
+      c.set('jwtPayload', { organizationId: orgIdFromGateway });
+      return next();
+    }
+
     const authHeader = c.req.header('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return c.json({ error: 'Unauthorized' }, 401);

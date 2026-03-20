@@ -154,7 +154,9 @@ export const CreateInteractionRoute = createRoute({
               .number()
               .int()
               .min(0)
-              .max(Date.now() + 86400000),
+              .refine(ts => ts <= Date.now() + 86400000, {
+                message: 'timestamp cannot be more than 24 hours in the future',
+              }),
           }),
         },
       },
