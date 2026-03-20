@@ -6,6 +6,7 @@
       "name": "cloudflare-workers-containers-hono-template",
       "dependencies": {
         "@antfu/eslint-config": "^6.7.3",
+        "@cloudflare/workers-types": "^4.20240124.0",
         "@hono/swagger-ui": "^0.5.3",
         "@hono/zod-openapi": "^1.2.0",
         "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
@@ -57,6 +58,8 @@
     "@cloudflare/workerd-linux-arm64": ["@cloudflare/workerd-linux-arm64@1.20260103.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-kjMHGrnnZrOyQnXuJ8YpblKtjkv45o+utIYk4AZUoaUBbEltwn7CXucDa0MG0jsDDvCCwRabdaJSAXHV6JB/ZQ=="],
 
     "@cloudflare/workerd-windows-64": ["@cloudflare/workerd-windows-64@1.20260103.0", "", { "os": "win32", "cpu": "x64" }, "sha512-M7mZHV6uWVE+Mf8r/nT6/21N1+Z4JmZTPJjek3rB4n7netOJGZIUQwyuY+5gwOnq+qJsqHoU/RP7b4lFSoMZuQ=="],
+
+    "@cloudflare/workers-types": ["@cloudflare/workers-types@4.20260317.1", "", {}, "sha512-+G4eVwyCpm8Au1ex8vQBCuA9wnwqetz4tPNRoB/53qvktERWBRMQnrtvC1k584yRE3emMThtuY0gWshvSJ++PQ=="],
 
     "@commitlint/config-conventional": ["@commitlint/config-conventional@20.3.0", "", { "dependencies": { "@commitlint/types": "^20.2.0", "conventional-changelog-conventionalcommits": "^7.0.2" } }, "sha512-g1OXVl6E2v0xF1Ru2RpxQ+Vfy7XUcUsCmLKzGUrhFLS4hSNykje0QSy6djBtzOiOBQCepBrmIlqx/gRlzrSh5A=="],
 
