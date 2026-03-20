@@ -121,11 +121,14 @@ app.post('/analyze/session', async c => {
 
 app.post('/internal/web-sessions/process', async c => {
   try {
-    const body = await c.req.json<{ sessionId: string }>();
+    const body = await c.req.json<{
+      sessionId: string;
+      organizationId?: string | null;
+    }>();
     if (!body.sessionId) {
       return c.json({ error: 'sessionId is required' }, 400);
     }
-    await processWebSessionExpiry(body.sessionId, c.env);
+    await processWebSessionExpiry(body.sessionId, c.env, body.organizationId);
     return c.json({ processed: true });
   } catch (err) {
     console.error('Failed to process web session:', err);

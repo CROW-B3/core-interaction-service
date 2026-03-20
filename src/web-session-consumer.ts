@@ -40,7 +40,7 @@ interface RRwebSnapshotRow {
 
 interface SessionDataResponse {
   success: boolean;
-  session: WebSession;
+  session: WebSession & { projectId?: string | null };
   events: WebEvent[];
   rrwebSnapshots?: RRwebSnapshotRow[];
 }
@@ -78,7 +78,8 @@ function buildSummary(session: WebSession, events: WebEvent[]): string {
 
 export async function processWebSessionExpiry(
   sessionId: string,
-  env: Environment
+  env: Environment,
+  organizationId?: string | null
 ): Promise<void> {
   const response = await fetch(
     `${env.WEB_INGEST_SERVICE_URL}/internal/sessions/${sessionId}/data`
@@ -96,10 +97,12 @@ export async function processWebSessionExpiry(
   const data = buildInteractionData(session, events);
   const summary = buildSummary(session, events);
 
+  const resolvedOrgId = organizationId ?? session.projectId ?? null;
+
   const db = drizzle(env.DB, { schema });
   await db.insert(schema.interaction).values({
     id: crypto.randomUUID(),
-    organizationId: null,
+    organizationId: resolvedOrgId,
     sourceType: 'web',
     sessionId: session.id,
     data,
@@ -135,7 +138,7 @@ export async function processWebSessionExpiry(
 
   const analysisPayload: SessionAnalysisPayload = {
     sessionId: session.id,
-    projectId: 'unknown', // Queue path doesn't have projectId
+    projectId: resolvedOrgId ?? 'unknown',
     events: [
       ...events.map(e => ({
         type: e.type,
