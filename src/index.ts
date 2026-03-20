@@ -377,15 +377,33 @@ function isCctvBatchMessage(body: unknown): body is CctvBatchQueueMessage {
   return Array.isArray(candidate.frameAnalyses);
 }
 
+function isValidInteractionMessage(body: unknown): body is InteractionMessage {
+  if (!body || typeof body !== 'object') return false;
+  const candidate = body as Record<string, unknown>;
+  return (
+    typeof candidate.sourceType === 'string' &&
+    typeof candidate.data === 'string' &&
+    typeof candidate.timestamp === 'number' &&
+    !Number.isNaN(candidate.timestamp)
+  );
+}
+
 async function handleInteractionQueueMessage(
   msg: Message<InteractionMessage>,
   env: Environment
 ): Promise<void> {
-  const db = drizzle(env.DB, { schema });
   const body = msg.body;
+  if (!isValidInteractionMessage(body)) {
+    console.error(
+      'Skipping malformed interaction queue message:',
+      JSON.stringify(body)
+    );
+    return;
+  }
+  const db = drizzle(env.DB, { schema });
   await db.insert(schema.interaction).values({
     id: crypto.randomUUID(),
-    organizationId: body.organizationId,
+    organizationId: body.organizationId ?? null,
     sourceType: body.sourceType,
     sessionId: body.sessionId ?? null,
     data: body.data,
