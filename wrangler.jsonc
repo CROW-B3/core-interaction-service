@@ -5,6 +5,10 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-12-17",
   "compatibility_flags": ["nodejs_compat"],
+  "dev": {
+    "enable_containers": false,
+    "port": 8008,
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,
@@ -15,6 +19,7 @@
   "vars": {
     "ENVIRONMENT": "prod",
     "AXIOM_DATASET": "crow-traces",
+    "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
   },
   "durable_objects": {
     "bindings": [
@@ -35,15 +40,17 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "crow-core-interaction-service-db",
-      "database_id": "ba03bcb4-01e2-4880-ae94-01ef11ac3aa1",
+      "database_name": "crow-core-interaction-service-db-dev",
+      "database_id": "561e77da-d940-4091-a274-7ec5e6bf6755",
       "migrations_dir": "drizzle/migrations",
+      "remote": true
     },
   ],
   "r2_buckets": [
     {
       "binding": "R2_BUCKET",
-      "bucket_name": "crow-core-interaction-service-store"
+      "bucket_name": "crow-core-interaction-service-store",
+      "remote": true
     }
   ],
   "queues": {
@@ -87,6 +94,7 @@
         "AXIOM_DATASET": "crow-traces",
         "AUTH_SERVICE_URL": "https://dev.internal.auth-api.crowai.dev",
         "PRODUCT_SERVICE_URL": "https://dev.internal.products.crowai.dev",
+        "WEB_INGEST_SERVICE_URL": "https://dev.internal.ingest-worker.crowai.dev",
         // SYSTEM_SECRET must be set as a secret: wrangler secret put SYSTEM_SECRET --env dev
       },
       "durable_objects": {
@@ -108,6 +116,7 @@
           "database_name": "crow-core-interaction-service-db-dev",
           "database_id": "561e77da-d940-4091-a274-7ec5e6bf6755",
           "migrations_dir": "drizzle/migrations",
+          "remote": true
         },
       ],
       "r2_buckets": [
@@ -154,6 +163,7 @@
         "ENVIRONMENT": "local",
         "AXIOM_DATASET": "crow-traces",
         "PRODUCT_SERVICE_URL": "http://localhost:8006",
+        "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
       },
       "d1_databases": [
         {

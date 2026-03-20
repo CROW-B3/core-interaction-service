@@ -3,6 +3,7 @@ import type {
   Environment,
   InteractionMessage,
 } from './types';
+import type { SessionAnalysisPayload } from './web-session/agents/types';
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { DurableObject } from 'cloudflare:workers';
 import { and, count, eq, like, or } from 'drizzle-orm';
@@ -18,6 +19,8 @@ import {
   GetInteractionsSummaryRoute,
   HelloWorldRoute,
 } from './routes';
+import { processWebSessionExpiry } from './web-session-consumer';
+import { runSessionAnalysis } from './web-session/pipeline';
 
 export class InteractionAnalyzerContainer extends DurableObject<Environment> {
   async fetch(request: Request): Promise<Response> {
@@ -101,6 +104,34 @@ app.openapi(HelloWorldRoute, c =>
 );
 
 app.get('/health', c => c.json({ status: 'ok' }));
+
+app.post('/analyze/session', async c => {
+  try {
+    const payload = await c.req.json<SessionAnalysisPayload>();
+    if (!payload.sessionId || !payload.projectId) {
+      return c.json({ error: 'sessionId and projectId are required' }, 400);
+    }
+    c.executionCtx.waitUntil(runSessionAnalysis(payload, c.env));
+    return c.json({ accepted: true }, 202);
+  } catch (err) {
+    console.error('Failed to accept session analysis:', err);
+    return c.json({ error: 'Failed to accept session analysis' }, 500);
+  }
+});
+
+app.post('/internal/web-sessions/process', async c => {
+  try {
+    const body = await c.req.json<{ sessionId: string }>();
+    if (!body.sessionId) {
+      return c.json({ error: 'sessionId is required' }, 400);
+    }
+    await processWebSessionExpiry(body.sessionId, c.env);
+    return c.json({ processed: true });
+  } catch (err) {
+    console.error('Failed to process web session:', err);
+    return c.json({ error: 'Failed to process web session' }, 500);
+  }
+});
 
 app.openapi(CreateInteractionRoute, async c => {
   const db = drizzle(c.env.DB, { schema });

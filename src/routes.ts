@@ -88,7 +88,7 @@ export const GetInteractionsByOrgRoute = createRoute({
             interactions: z.array(
               z.object({
                 id: z.string(),
-                organizationId: z.string(),
+                organizationId: z.string().nullable(),
                 sourceType: z.string(),
                 sessionId: z.string().nullable(),
                 data: z.string(),
