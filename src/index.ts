@@ -2,6 +2,7 @@ import type {
   CctvBatchQueueMessage,
   Environment,
   InteractionMessage,
+  SessionExpiryMessage,
 } from './types';
 import type { SessionAnalysisPayload } from './web-session/agents/types';
 import { OpenAPIHono } from '@hono/zod-openapi';
@@ -376,6 +377,16 @@ function isCctvBatchMessage(body: unknown): body is CctvBatchQueueMessage {
   return Array.isArray(candidate.frameAnalyses);
 }
 
+function isSessionExpiryMessage(body: unknown): body is SessionExpiryMessage {
+  if (!body || typeof body !== 'object') return false;
+  const candidate = body as Record<string, unknown>;
+  return (
+    typeof candidate.sessionId === 'string' &&
+    typeof candidate.expiredAt === 'string' &&
+    !('sourceType' in candidate)
+  );
+}
+
 function isValidInteractionMessage(body: unknown): body is InteractionMessage {
   if (!body || typeof body !== 'object') return false;
   const candidate = body as Record<string, unknown>;
@@ -415,6 +426,34 @@ async function handleInteractionQueueMessage(
   });
 }
 
+async function handleSessionExpiryMessage(
+  msg: Message<SessionExpiryMessage>,
+  env: Environment
+): Promise<void> {
+  const body = msg.body;
+  console.warn(
+    `Processing session expiry for session: ${body.sessionId}, expired at: ${body.expiredAt}`
+  );
+  const db = drizzle(env.DB, { schema });
+  await db.insert(schema.interaction).values({
+    id: crypto.randomUUID(),
+    organizationId: null,
+    sourceType: 'web',
+    sessionId: body.sessionId,
+    data: JSON.stringify({
+      type: 'session_expired',
+      sessionId: body.sessionId,
+      expiredAt: body.expiredAt,
+    }),
+    summary: null,
+    confidence: null,
+    tags: null,
+    productIds: null,
+    timestamp: new Date(body.expiredAt),
+    createdAt: new Date(),
+  });
+}
+
 async function handleCctvBatchQueueMessage(
   msg: Message<CctvBatchQueueMessage>,
   env: Environment
@@ -425,7 +464,9 @@ async function handleCctvBatchQueueMessage(
 export default {
   fetch: app.fetch,
   async queue(
-    batch: MessageBatch<InteractionMessage | CctvBatchQueueMessage>,
+    batch: MessageBatch<
+      InteractionMessage | CctvBatchQueueMessage | SessionExpiryMessage
+    >,
     env: Environment
   ): Promise<void> {
     for (const msg of batch.messages) {
@@ -433,6 +474,11 @@ export default {
         if (isCctvBatchMessage(msg.body)) {
           await handleCctvBatchQueueMessage(
             msg as Message<CctvBatchQueueMessage>,
+            env
+          );
+        } else if (isSessionExpiryMessage(msg.body)) {
+          await handleSessionExpiryMessage(
+            msg as Message<SessionExpiryMessage>,
             env
           );
         } else {

@@ -21,6 +21,11 @@ export interface InteractionMessage {
   timestamp: number;
 }
 
+export interface SessionExpiryMessage {
+  sessionId: string;
+  expiredAt: string;
+}
+
 export interface FrameAnalysisResult {
   frameIndex: number;
   timestamp: number;
