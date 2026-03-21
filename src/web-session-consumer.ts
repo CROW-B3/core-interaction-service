@@ -85,6 +85,13 @@ export async function processWebSessionExpiry(
     `${env.WEB_INGEST_SERVICE_URL}/internal/sessions/${sessionId}/data`
   );
 
+  if (response.status === 404) {
+    console.warn(
+      `Session ${sessionId} not found in web-ingest-service (404) — session may have already been exported or deleted. Skipping processing.`
+    );
+    return;
+  }
+
   if (!response.ok) {
     throw new Error(
       `Failed to fetch session data: ${response.status} ${response.statusText}`
