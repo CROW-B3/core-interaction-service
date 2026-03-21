@@ -93,9 +93,10 @@ export async function processWebSessionExpiry(
   }
 
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch session data: ${response.status} ${response.statusText}`
+    console.error(
+      `Failed to fetch session data for session ${sessionId}: ${response.status} ${response.statusText} — skipping processing.`
     );
+    return;
   }
 
   const body = (await response.json()) as SessionDataResponse;
