@@ -18,7 +18,6 @@
   },
   "vars": {
     "ENVIRONMENT": "prod",
-    "AXIOM_DATASET": "crow-traces",
     "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
   },
   "durable_objects": {
@@ -91,7 +90,6 @@
       },
       "vars": {
         "ENVIRONMENT": "dev",
-        "AXIOM_DATASET": "crow-traces",
         "AUTH_SERVICE_URL": "https://dev.internal.auth-api.crowai.dev",
         "PRODUCT_SERVICE_URL": "https://dev.internal.products.crowai.dev",
         "WEB_INGEST_SERVICE_URL": "https://dev.internal.ingest-worker.crowai.dev",
@@ -161,7 +159,6 @@
     "local": {
       "vars": {
         "ENVIRONMENT": "local",
-        "AXIOM_DATASET": "crow-traces",
         "PRODUCT_SERVICE_URL": "http://localhost:8006",
         "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
       },

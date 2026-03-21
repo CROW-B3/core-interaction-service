@@ -8,7 +8,6 @@ declare namespace Cloudflare {
   }
   interface Env {
     ENVIRONMENT: 'prod' | 'dev' | 'local';
-    AXIOM_DATASET: 'crow-traces';
     WEB_INGEST_SERVICE_URL:
       | 'http://localhost:8013'
       | 'https://dev.internal.ingest-worker.crowai.dev';
@@ -22,7 +21,6 @@ declare namespace Cloudflare {
     S3_API: string;
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
-    AXIOM_API_TOKEN: string;
     INTERACTION_ANALYZER: DurableObjectNamespace<
       import('./src/index').InteractionAnalyzerContainer
     >;
@@ -44,7 +42,6 @@ declare namespace NodeJS {
     Pick<
       Cloudflare.Env,
       | 'ENVIRONMENT'
-      | 'AXIOM_DATASET'
       | 'WEB_INGEST_SERVICE_URL'
       | 'AUTH_SERVICE_URL'
       | 'PRODUCT_SERVICE_URL'
@@ -54,7 +51,6 @@ declare namespace NodeJS {
       | 'S3_API'
       | 'R2_ACCESS_KEY_ID'
       | 'R2_SECRET_ACCESS_KEY'
-      | 'AXIOM_API_TOKEN'
     >
   > {}
 }
