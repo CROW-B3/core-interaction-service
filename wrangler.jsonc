@@ -19,6 +19,7 @@
   "vars": {
     "ENVIRONMENT": "prod",
     "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
+    "AI_GATEWAY_ID": "crow-ai-gateway",
   },
   "durable_objects": {
     "bindings": [
@@ -93,6 +94,7 @@
         "AUTH_SERVICE_URL": "https://dev.internal.auth-api.crowai.dev",
         "PRODUCT_SERVICE_URL": "https://dev.internal.products.crowai.dev",
         "WEB_INGEST_SERVICE_URL": "https://dev.internal.ingest-worker.crowai.dev",
+        "AI_GATEWAY_ID": "crow-ai-gateway",
         // SYSTEM_SECRET must be set as a secret: wrangler secret put SYSTEM_SECRET --env dev
       },
       "durable_objects": {
@@ -161,6 +163,7 @@
         "ENVIRONMENT": "local",
         "PRODUCT_SERVICE_URL": "http://localhost:8006",
         "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
+        "AI_GATEWAY_ID": "crow-ai-gateway",
       },
       "d1_databases": [
         {

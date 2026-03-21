@@ -75,14 +75,18 @@ async function runAgent(
 
   const response = await withRetry(
     async () =>
-      ai.run(ANALYSIS_MODEL as any, {
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        max_tokens: maxTokens,
-        temperature: 0.7,
-      }),
+      ai.run(
+        ANALYSIS_MODEL as any,
+        {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          max_tokens: maxTokens,
+          temperature: 0.7,
+        },
+        { gateway: { id: 'crow-ai-gateway', skipCache: false } }
+      ),
     `Agent: ${agentName}`
   );
 
@@ -580,14 +584,18 @@ Format your response clearly with headers.`;
 
   const response = await withRetry(
     async () =>
-      ai.run(ANALYSIS_MODEL as any, {
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        max_tokens: 4000,
-        temperature: 0.5,
-      }),
+      ai.run(
+        ANALYSIS_MODEL as any,
+        {
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          max_tokens: 4000,
+          temperature: 0.5,
+        },
+        { gateway: { id: 'crow-ai-gateway', skipCache: false } }
+      ),
     'Synthesis Agent'
   );
 
@@ -699,14 +707,16 @@ export async function analyzeScreenshot(
 ): Promise<AgentInsight[]> {
   const response = await withRetry(
     async () =>
-      ai.run(VISION_MODEL as any, {
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `You are a UX expert analyzing a screenshot from a user session. ${context}
+      ai.run(
+        VISION_MODEL as any,
+        {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `You are a UX expert analyzing a screenshot from a user session. ${context}
 
 Analyze this screenshot and identify:
 1. UI/UX issues visible (poor contrast, cluttered layout, confusing elements)
@@ -716,16 +726,18 @@ Analyze this screenshot and identify:
 5. Information density issues
 
 Provide specific, actionable observations.`,
-              },
-              {
-                type: 'image',
-                image: imageBase64,
-              },
-            ],
-          },
-        ],
-        max_tokens: 1500,
-      }),
+                },
+                {
+                  type: 'image',
+                  image: imageBase64,
+                },
+              ],
+            },
+          ],
+          max_tokens: 1500,
+        },
+        { gateway: { id: 'crow-ai-gateway', skipCache: false } }
+      ),
     'Vision Analyst'
   );
 

@@ -121,10 +121,14 @@ async function runProductMatchingWithLlm(
   const prompt = buildMatchingPrompt(framesSummary, catalogSummary);
 
   try {
-    const result = await ai.run(LLAMA_MODEL as any, {
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1024,
-    });
+    const result = await ai.run(
+      LLAMA_MODEL as any,
+      {
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1024,
+      },
+      { gateway: { id: 'crow-ai-gateway', skipCache: false } }
+    );
     const output = result as { response?: string } | string;
     const responseText =
       typeof output === 'string' ? output : (output?.response ?? '');
