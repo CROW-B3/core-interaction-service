@@ -2,18 +2,21 @@ export interface Environment {
   DB: D1Database;
   ENVIRONMENT: 'local' | 'dev' | 'prod';
   INTERACTION_ANALYZER: DurableObjectNamespace;
+  INTERACTION_VECTORIZE: VectorizeIndex;
   INTERACTION_QUEUE: Queue<InteractionMessage>;
   CCTV_QUEUE: Queue<CctvBatchQueueMessage>;
   AUTH_SERVICE_URL: string;
   PRODUCT_SERVICE_URL: string;
   WEB_INGEST_SERVICE_URL: string;
+  AI_GATEWAY_ID: string;
   SYSTEM_SECRET: string;
   INTERNAL_GATEWAY_KEY?: string;
   AI: Ai;
+  R2_BUCKET: R2Bucket;
 }
 
 export interface InteractionMessage {
-  organizationId: string;
+  organizationId: string | null;
   sourceType: 'web' | 'cctv' | 'social';
   sessionId?: string;
   data: string;

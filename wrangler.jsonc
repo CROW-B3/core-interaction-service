@@ -16,6 +16,12 @@
   "ai": {
     "binding": "AI",
   },
+  "vectorize": [
+    {
+      "binding": "INTERACTION_VECTORIZE",
+      "index_name": "crow-interaction-index",
+    },
+  ],
   "vars": {
     "ENVIRONMENT": "prod",
     "WEB_INGEST_SERVICE_URL": "http://localhost:8013",
@@ -97,6 +103,12 @@
         "AI_GATEWAY_ID": "crow-ai-gateway",
         // SYSTEM_SECRET must be set as a secret: wrangler secret put SYSTEM_SECRET --env dev
       },
+      "vectorize": [
+        {
+          "binding": "INTERACTION_VECTORIZE",
+          "index_name": "crow-interaction-index-dev",
+        },
+      ],
       "durable_objects": {
         "bindings": [
           { "name": "INTERACTION_ANALYZER", "class_name": "InteractionAnalyzerContainer" }

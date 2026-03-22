@@ -2,6 +2,7 @@ import type { Environment } from './types';
 import type { SessionAnalysisPayload } from './web-session/agents/types';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from './db/schema';
+import { vectorizeInteraction } from './services/interaction-vectorize';
 import { runSessionAnalysis } from './web-session/pipeline';
 
 interface WebSession {
@@ -106,10 +107,11 @@ export async function processWebSessionExpiry(
   const summary = buildSummary(session, events);
 
   const resolvedOrgId = organizationId ?? session.projectId ?? null;
+  const interactionId = crypto.randomUUID();
 
   const db = drizzle(env.DB, { schema });
   await db.insert(schema.interaction).values({
-    id: crypto.randomUUID(),
+    id: interactionId,
     organizationId: resolvedOrgId,
     sourceType: 'web',
     sessionId: session.id,
@@ -121,6 +123,16 @@ export async function processWebSessionExpiry(
     timestamp: new Date(session.startedAt),
     createdAt: new Date(),
   });
+
+  if (resolvedOrgId && summary) {
+    await vectorizeInteraction(env, {
+      id: interactionId,
+      organizationId: resolvedOrgId,
+      sourceType: 'web',
+      summary,
+      tags: null,
+    }).catch(err => console.error('Vectorize failed for web session:', err));
+  }
 
   const rrwebEvents = (rrwebSnapshots ?? []).map(snapshot => {
     const timestampMs =

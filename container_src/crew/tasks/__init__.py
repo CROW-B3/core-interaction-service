@@ -1,13 +1,13 @@
-from .analyze_navigation import create_navigation_analysis_task
-from .classify_intent import create_intent_analysis_task
-from .detect_friction import create_usability_analysis_task
-from .evaluate_engagement import create_engagement_metrics_task
-from .synthesize_insights import create_interaction_efficiency_task
+from .analyze_cctv_behavior import create_cctv_behavior_task
+from .analyze_social_sentiment import create_social_sentiment_task
+from .analyze_web_interactions import create_web_interaction_task
+from .match_products import create_product_matching_task
+from .synthesize_analysis import create_synthesis_task
 
 __all__ = [
-    "create_navigation_analysis_task",
-    "create_intent_analysis_task",
-    "create_usability_analysis_task",
-    "create_engagement_metrics_task",
-    "create_interaction_efficiency_task",
+    "create_cctv_behavior_task",
+    "create_social_sentiment_task",
+    "create_web_interaction_task",
+    "create_product_matching_task",
+    "create_synthesis_task",
 ]

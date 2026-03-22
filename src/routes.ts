@@ -22,9 +22,10 @@ export const AnalyzeInteractionsRoute = createRoute({
         'application/json': {
           schema: z.object({
             summary: z.string(),
-            insights: z.array(z.string()),
-            anomalies: z.array(z.string()),
-            recommendations: z.array(z.string()),
+            tags: z.array(z.string()),
+            confidence: z.number(),
+            productIds: z.array(z.string()),
+            sentiment: z.string(),
           }),
         },
       },
@@ -130,6 +131,53 @@ export const GetInteractionsSummaryRoute = createRoute({
         },
       },
       description: 'Interaction counts by source type',
+    },
+  },
+});
+
+export const SearchInteractionsRoute = createRoute({
+  method: 'get',
+  path: '/api/v1/interactions/organization/:orgId/search',
+  request: {
+    params: z.object({ orgId: z.string().uuid() }),
+    query: z.object({
+      q: z.string().min(1).max(512),
+      limit: z
+        .string()
+        .regex(/^[1-9]\d*$/)
+        .optional(),
+    }),
+    headers: z.object({
+      'x-organization-id': z.string().uuid(),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            results: z.array(
+              z.object({
+                id: z.string(),
+                score: z.number(),
+                sourceType: z.string().optional(),
+                summary: z.string().optional(),
+              })
+            ),
+            query: z.string(),
+            total: z.number(),
+          }),
+        },
+      },
+      description: 'Semantic search results for interactions',
+    },
+    403: {
+      content: {
+        'application/json': {
+          schema: z.object({ error: z.string(), message: z.string() }),
+        },
+      },
+      description: 'Forbidden',
     },
   },
 });

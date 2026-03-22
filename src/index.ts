@@ -19,7 +19,12 @@ import {
   GetInteractionsByOrgRoute,
   GetInteractionsSummaryRoute,
   HelloWorldRoute,
+  SearchInteractionsRoute,
 } from './routes';
+import {
+  searchInteractions,
+  vectorizeInteraction,
+} from './services/interaction-vectorize';
 import { processWebSessionExpiry } from './web-session-consumer';
 import { runSessionAnalysis } from './web-session/pipeline';
 
@@ -152,8 +157,9 @@ app.openapi(CreateInteractionRoute, async c => {
   }
   const dataAsString =
     typeof body.data === 'string' ? body.data : JSON.stringify(body.data);
+  const interactionId = crypto.randomUUID();
   await db.insert(schema.interaction).values({
-    id: crypto.randomUUID(),
+    id: interactionId,
     organizationId: callerOrgId,
     sourceType: body.sourceType,
     sessionId: body.sessionId ?? null,
@@ -165,6 +171,17 @@ app.openapi(CreateInteractionRoute, async c => {
     timestamp: new Date(body.timestamp),
     createdAt: new Date(),
   });
+  if (body.summary) {
+    c.executionCtx.waitUntil(
+      vectorizeInteraction(c.env, {
+        id: interactionId,
+        organizationId: callerOrgId,
+        sourceType: body.sourceType,
+        summary: body.summary ?? null,
+        tags: null,
+      }).catch(err => console.error('Vectorize failed:', err))
+    );
+  }
   return c.json({ queued: true }, 202);
 });
 
@@ -268,6 +285,43 @@ app.openapi(GetInteractionsSummaryRoute, async c => {
   return c.json({ ...tally, total });
 });
 
+app.openapi(SearchInteractionsRoute, async c => {
+  const { orgId: orgIdParam } = c.req.valid('param');
+  const callerOrgId = c.req.valid('header')['x-organization-id'];
+
+  if (!callerOrgId || callerOrgId !== orgIdParam) {
+    return c.json(
+      {
+        error: 'Forbidden',
+        message: 'Access denied to this organization',
+      } as const,
+      403 as const
+    );
+  }
+
+  const { q, limit: limitStr } = c.req.valid('query');
+  const topK = Math.min(
+    50,
+    Math.max(1, Number.parseInt(limitStr || '10', 10) || 10)
+  );
+
+  const matches = await searchInteractions(c.env, q, orgIdParam, topK);
+
+  return c.json(
+    {
+      results: matches.map(m => ({
+        id: m.id,
+        score: m.score,
+        sourceType: m.metadata.sourceType,
+        summary: m.metadata.summary,
+      })),
+      query: q,
+      total: matches.length,
+    },
+    200 as const
+  );
+});
+
 app.openapi(AnalyzeInteractionsRoute, async c => {
   const { orgId } = c.req.valid('param');
   const { period: periodParam, limit: limitParam } = c.req.valid('query');
@@ -329,9 +383,10 @@ app.openapi(AnalyzeInteractionsRoute, async c => {
       {
         error: 'Analysis container unavailable',
         summary: '',
-        insights: [],
-        anomalies: [],
-        recommendations: [],
+        tags: [],
+        confidence: 0,
+        productIds: [],
+        sentiment: 'neutral',
       } as any,
       500
     );
@@ -348,9 +403,10 @@ app.openapi(AnalyzeInteractionsRoute, async c => {
       {
         error: 'Analysis failed. Please try again later.',
         summary: '',
-        insights: [],
-        anomalies: [],
-        recommendations: [],
+        tags: [],
+        confidence: 0,
+        productIds: [],
+        sentiment: 'neutral',
       } as any,
       500
     );
@@ -358,9 +414,10 @@ app.openapi(AnalyzeInteractionsRoute, async c => {
 
   const result = await containerResponse.json<{
     summary: string;
-    insights: string[];
-    anomalies: string[];
-    recommendations: string[];
+    tags: string[];
+    confidence: number;
+    productIds: string[];
+    sentiment: string;
   }>();
 
   return c.json(result, 200);
@@ -411,8 +468,9 @@ async function handleInteractionQueueMessage(
     return;
   }
   const db = drizzle(env.DB, { schema });
+  const interactionId = crypto.randomUUID();
   await db.insert(schema.interaction).values({
-    id: crypto.randomUUID(),
+    id: interactionId,
     organizationId: body.organizationId ?? null,
     sourceType: body.sourceType,
     sessionId: body.sessionId ?? null,
@@ -424,6 +482,15 @@ async function handleInteractionQueueMessage(
     timestamp: new Date(body.timestamp),
     createdAt: new Date(),
   });
+  if (body.summary && body.organizationId) {
+    await vectorizeInteraction(env, {
+      id: interactionId,
+      organizationId: body.organizationId,
+      sourceType: body.sourceType,
+      summary: body.summary ?? null,
+      tags: null,
+    }).catch(err => console.error('Vectorize failed:', err));
+  }
 }
 
 async function handleSessionExpiryMessage(

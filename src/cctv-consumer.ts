@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { drizzle } from 'drizzle-orm/d1';
 import * as schema from './db/schema';
+import { vectorizeInteraction } from './services/interaction-vectorize';
 
 const LLAMA_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
@@ -191,18 +192,28 @@ export async function processCctvBatchMessage(
   const productIds = extractProductIdsFromInteraction(structured);
   const dataJson = buildInteractionDataJson(batch, structured);
   const summary = buildInteractionSummary(structured);
+  const interactionId = crypto.randomUUID();
+  const tagsJson = JSON.stringify(structured.tags);
 
   await db.insert(schema.interaction).values({
-    id: crypto.randomUUID(),
+    id: interactionId,
     organizationId: batch.organizationId,
     sourceType: 'cctv',
     sessionId: batch.sessionId,
     data: dataJson,
     summary,
     confidence: structured.confidence,
-    tags: JSON.stringify(structured.tags),
+    tags: tagsJson,
     productIds: JSON.stringify(productIds),
     timestamp: new Date(batch.batchEndTimestamp),
     createdAt: new Date(),
   });
+
+  await vectorizeInteraction(env, {
+    id: interactionId,
+    organizationId: batch.organizationId,
+    sourceType: 'cctv',
+    summary,
+    tags: tagsJson,
+  }).catch(err => console.error('Vectorize failed for CCTV interaction:', err));
 }
