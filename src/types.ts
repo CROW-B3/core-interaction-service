@@ -3,6 +3,8 @@ export interface Environment {
   ENVIRONMENT: 'local' | 'dev' | 'prod';
   INTERACTION_ANALYZER: DurableObjectNamespace;
   INTERACTION_VECTORIZE: VectorizeIndex;
+  PRODUCT_VECTORIZE: VectorizeIndex;
+  QNA_VECTORIZE: VectorizeIndex;
   INTERACTION_QUEUE: Queue<InteractionMessage>;
   CCTV_QUEUE: Queue<CctvBatchQueueMessage>;
   AUTH_SERVICE_URL: string;

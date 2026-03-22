@@ -108,6 +108,18 @@
           "binding": "INTERACTION_VECTORIZE",
           "index_name": "crow-interaction-index-dev",
         },
+        {
+          "binding": "PRODUCT_VECTORIZE",
+          "index_name": "crow-product-index-dev",
+          "dimensions": 1024,
+          "metric": "cosine",
+        },
+        {
+          "binding": "QNA_VECTORIZE",
+          "index_name": "crow-qna-index-dev",
+          "dimensions": 1024,
+          "metric": "cosine",
+        },
       ],
       "durable_objects": {
         "bindings": [
