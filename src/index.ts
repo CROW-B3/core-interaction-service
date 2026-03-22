@@ -41,7 +41,8 @@ function escapeLikeWildcards(s: string): string {
 function buildBaseConditions(
   orgId: string,
   sourceType: string | undefined,
-  q: string | undefined
+  q: string | undefined,
+  productId?: string
 ) {
   const orgCondition = eq(schema.interaction.organizationId, orgId);
   const sourceCondition = sourceType
@@ -53,8 +54,11 @@ function buildBaseConditions(
         like(schema.interaction.summary, `%${escapeLikeWildcards(q)}%`)
       )
     : undefined;
+  const productCondition = productId
+    ? like(schema.interaction.productIds, `%${escapeLikeWildcards(productId)}%`)
+    : undefined;
 
-  return and(orgCondition, sourceCondition, textCondition);
+  return and(orgCondition, sourceCondition, textCondition, productCondition);
 }
 
 const app = new OpenAPIHono<{ Bindings: Environment }>({
@@ -205,6 +209,7 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
     page: pageStr,
     limit: limitStr,
     sourceType,
+    productId,
     q,
   } = c.req.valid('query');
 
@@ -215,7 +220,7 @@ app.openapi(GetInteractionsByOrgRoute, async c => {
   );
   const offset = (page - 1) * limit;
 
-  const baseConditions = buildBaseConditions(orgId, sourceType, q);
+  const baseConditions = buildBaseConditions(orgId, sourceType, q, productId);
 
   const [interactions, countResult] = await Promise.all([
     db
