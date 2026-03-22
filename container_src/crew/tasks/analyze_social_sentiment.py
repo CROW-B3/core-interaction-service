@@ -2,6 +2,15 @@ import json
 
 from crewai import Agent, Task
 
+_COMMON_RULES = (
+    "CRITICAL OUTPUT RULES:\n"
+    "- NEVER include organization IDs, UUIDs, internal identifiers, or raw system IDs in output\n"
+    "- Refer to the brand or organization as 'your brand' or 'the organization' — never by ID\n"
+    "- Name topics descriptively (e.g. 'Product Quality Complaints', not 'topic_3')\n"
+    "- Keep 'summary' to one concise, actionable sentence about the most important signal\n"
+    "- Output ONLY valid JSON — no markdown, no extra text\n"
+)
+
 
 def create_social_sentiment_task(agent: Agent, interactions: list[dict]) -> Task:
     social_interactions = [i for i in interactions if i.get("sourceType") == "social"]
@@ -12,16 +21,24 @@ def create_social_sentiment_task(agent: Agent, interactions: list[dict]) -> Task
             f"Analyze {len(social_interactions)} social media interactions for sentiment "
             f"and engagement quality.\n\n"
             f"Evaluate:\n"
-            f"1. Overall sentiment distribution (positive, negative, neutral)\n"
-            f"2. Engagement quality beyond vanity metrics\n"
-            f"3. Trending topics and themes\n"
-            f"4. Brand perception signals\n"
-            f"5. Notable mentions or influencer activity\n\n"
-            f"Social interaction data:\n{data_json}\n\n"
-            f"Respond ONLY with valid JSON (no markdown, no extra text):\n"
+            f"1. Sentiment distribution (positive, negative, neutral) with confidence\n"
+            f"2. Engagement quality — meaningful replies and shares vs passive likes\n"
+            f"3. Trending topics and themes with descriptive labels\n"
+            f"4. Brand perception signals — trust, excitement, frustration\n"
+            f"5. High-impact mentions (influencer reach, viral potential)\n\n"
+            f"Social data:\n{data_json}\n\n"
+            f"{_COMMON_RULES}\n"
+            f"Output structure:\n"
             f'{{"sentimentDistribution": {{"positive": 0.6, "negative": 0.1, "neutral": 0.3}}, '
-            f'"topics": ["topic1"], "engagementQuality": 0.7, "summary": "brief summary"}}'
+            f'"topics": [{{"title": "Descriptive Topic Name", "volume": 0.4, '
+            f'"sentiment": "positive|negative|neutral"}}], '
+            f'"engagementQuality": 0.7, '
+            f'"brandPerception": "one sentence describing how the brand is perceived", '
+            f'"summary": "single actionable sentence about the dominant social signal"}}'
         ),
-        expected_output="JSON with sentimentDistribution, topics, engagementQuality, and summary",
+        expected_output=(
+            "JSON with sentiment distribution, named topic objects with volume and sentiment, "
+            "engagement quality score, brand perception summary, and a concise actionable overall summary"
+        ),
         agent=agent,
     )
