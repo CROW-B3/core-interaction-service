@@ -76,31 +76,10 @@ export async function storeAnalysisResult(
 
 function buildSummary(
   result: AnalysisPipelineResult,
-  metadata: SessionMetadata
+  _metadata: SessionMetadata
 ): string {
-  const layerLabel =
-    result.layer === 'deterministic'
-      ? 'L1'
-      : result.layer === 'behavioral'
-        ? 'L2'
-        : 'L3';
-
-  const topWhys = result.finalWhys.slice(0, 3);
-
-  if (topWhys.length === 0) {
-    return `${layerLabel} | No whys derived | ${metadata.deviceType}/${metadata.browser}`;
-  }
-
-  const primaryWhy = topWhys[0];
-
-  const secondaryWhys = topWhys
-    .slice(1)
-    .map(w => `${w.why} [${w.category}:${w.confidence.toFixed(2)}]`)
-    .join('; ');
-
-  const secondary = secondaryWhys ? ` | Also: ${secondaryWhys}` : '';
-
-  return `${layerLabel} | ${primaryWhy.why} [${primaryWhy.category}:${primaryWhy.confidence.toFixed(2)}]${secondary} | ${metadata.deviceType}/${metadata.browser}`;
+  if (result.finalWhys.length === 0) return '';
+  return result.finalWhys[0].why;
 }
 
 function buildTags(result: AnalysisPipelineResult): string[] {
