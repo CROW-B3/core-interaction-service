@@ -88,6 +88,10 @@ app.use('/api/v1/*', async (c, next) => {
 });
 
 app.use('/api/v1/*', async (c, next) => {
+  const internalKey = c.req.header('X-Internal-Key');
+  if (internalKey && c.env.INTERNAL_GATEWAY_KEY && internalKey === c.env.INTERNAL_GATEWAY_KEY) {
+    return next();
+  }
   const jwtMiddleware = createJWTMiddleware(c.env);
   return jwtMiddleware(c, next);
 });
